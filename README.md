@@ -20,14 +20,17 @@ A minimal, file-based personal knowledge system designed for AI-assisted workflo
 
 ## Installation
 
-Clone to your agent's skills/tools directory:
+Clone to your agent's skills directory:
 
 ```bash
 # OpenClaw
 cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
 
-# Claude Code / others
-git clone https://github.com/dooart/chaos.git ~/chaos-skill
+# Claude Code
+cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
+
+# Others
+git clone https://github.com/dooart/chaos.git /path/to/skills/chaos
 ```
 
 See [SETUP.md](SETUP.md) for full configuration instructions.

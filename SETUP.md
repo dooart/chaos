@@ -10,17 +10,17 @@ This guide helps you set up Chaos Notes. The skill can be used with any AI agent
 
 ## 1. Install the Skill
 
-Clone the skill to a location your agent can access:
+Clone the skill to your agent's skills directory:
 
 ```bash
 # OpenClaw
 cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
 
-# Claude Code (add to project or home)
-git clone https://github.com/dooart/chaos.git ~/chaos-skill
+# Claude Code
+cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 
-# Or anywhere accessible to your agent
-git clone https://github.com/dooart/chaos.git /path/to/chaos
+# Codex / others
+git clone https://github.com/dooart/chaos.git /path/to/skills/chaos
 ```
 
 ## 2. Create Your Data Directory
@@ -121,10 +121,10 @@ source ~/.bashrc
 
 ## 9. Point Your Agent to the Skill
 
-Tell your agent where to find the skill file:
+Most agents auto-discover skills in their skills directory:
 
-- **OpenClaw:** Automatically discovers skills in `~/.openclaw/skills/`
-- **Claude Code:** Add to your project's `CLAUDE.md` or reference the path
+- **OpenClaw:** Auto-discovers from `~/.openclaw/skills/`
+- **Claude Code:** Auto-discovers from `~/.claude/skills/` (see [skills docs](https://code.claude.com/docs/en/skills))
 - **Other agents:** Point to `SKILL.md` in your agent's tool/skill configuration
 
 ## Verify Setup
