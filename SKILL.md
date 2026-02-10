@@ -32,14 +32,16 @@ Activate this skill when the user:
 ## Directory Structure
 
 ```
-{baseDir}/
-├── SKILL.md        # This file
-├── SETUP.md        # Setup instructions
-├── scripts/        # Automation scripts
-├── web/            # Web UI server
-└── data/           # Symlink to user's data directory
-    ├── notes/      # All notes live here
-    └── assets/     # Images with metadata
+{baseDir}/              # Skill directory
+├── SKILL.md           # This file
+├── SETUP.md           # Setup instructions
+├── scripts/           # Automation scripts
+├── web/               # Web UI server
+└── data/              # Symlink to ~/.chaos
+
+~/.chaos/              # User's data (default location)
+├── notes/             # All notes live here
+└── assets/            # Images with metadata
 ```
 
 ## Note Format

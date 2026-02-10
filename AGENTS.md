@@ -47,7 +47,7 @@ Key files:
 
 ### Data (`data/`)
 
-Symlink to user's data directory containing:
+Symlink to `~/.chaos` (default) containing:
 - `notes/` — All notes as `<id>-<slug>.md`
 - `assets/` — Images (webp) with sibling `.md` metadata
 

@@ -40,14 +40,16 @@ Follows the [AgentSkills](https://skill.md) format supported by most AI coding a
 ## Structure
 
 ```
-chaos/                  # Skill directory
+~/.chaos/               # Your data (default location)
+├── notes/             # Your notes
+└── assets/            # Images
+
+/path/to/skills/chaos/  # Skill directory
 ├── SKILL.md           # Agent instructions
 ├── SETUP.md           # Setup guide
 ├── scripts/           # Automation scripts
 ├── web/               # React web UI + server
-└── data/              # Symlink to your data
-    ├── notes/         # Your notes
-    └── assets/        # Images
+└── data/              # Symlink to ~/.chaos
 ```
 
 ## Note Format
