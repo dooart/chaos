@@ -1,3 +1,6 @@
+# Data directory (symlink to user's data)
+data
+
 # Dependencies
 web/node_modules/
 
@@ -10,4 +13,3 @@ web/.env
 # Misc
 .DS_Store
 *.log
-config/

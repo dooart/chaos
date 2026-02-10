@@ -4,35 +4,33 @@ This file helps AI coding assistants work on the Chaos Notes codebase.
 
 ## Overview
 
-Chaos Notes is a minimal, file-based personal knowledge system. Notes are markdown files with stable IDs, managed via bash scripts that auto-commit to git.
+Chaos Notes is an OpenClaw skill for managing personal notes. Notes are markdown files with stable IDs, managed via bash scripts.
 
 ## Key Directories
 
 | Directory | Purpose |
 |-----------|--------|
-| `notes/` | All notes as `<id>-<slug>.md` |
-| `assets/` | Images (webp) with sibling `.md` metadata |
-| `scripts/` | Bash scripts for note CRUD (auto-commit) |
-| `skills/` | AI skill definitions |
+| `scripts/` | Bash scripts for note CRUD |
 | `web/` | React frontend + Hono/Bun server |
+| `data/` | Symlink to user's data (notes + assets) |
 | `tests/` | Test files |
 
 ## Working with Notes
 
-For creating, editing, searching, or deleting notes, read the skill file:
+For creating, editing, searching, or deleting notes, read:
 
 ```
-skills/chaos/SKILL.md
+SKILL.md
 ```
 
-This contains the full API for note management. **Always use the scripts** — they handle git commits and validation.
+This contains the full API for note management. **Always use the scripts** — they handle validation and optional git commits.
 
 ## Architecture
 
 ### Scripts (`scripts/`)
 
 - Pure bash + `bun` for frontmatter parsing
-- Each script validates, modifies files, then commits and pushes
+- Each script validates, modifies files, then commits/pushes if `data/.git` exists
 - `parse-frontmatter.ts` — TypeScript helper using `gray-matter`
 
 ### Web (`web/`)
@@ -47,18 +45,11 @@ Key files:
 - `src/` — React components
 - `.env` — `AUTH_USER` and `AUTH_PASSWORD` (required)
 
-### Note Format
+### Data (`data/`)
 
-```markdown
----
-id: abc123def456ghi789012  # 21 chars, never changes
-title: Note Title
-status: building           # optional: building | done
-tags: [tag1, tag2]         # optional
----
-
-Markdown content with [[id]] links to other notes.
-```
+Symlink to user's data directory containing:
+- `notes/` — All notes as `<id>-<slug>.md`
+- `assets/` — Images (webp) with sibling `.md` metadata
 
 ## Development
 
@@ -83,11 +74,9 @@ cd web
 bun run build
 ```
 
-Production files go to `web/dist/`, served by the Hono server.
-
 ## Setup for New Users
 
-If the human needs help configuring Chaos for themselves (new repo, git auth, etc.), guide them to:
+If the human needs help configuring Chaos, guide them to:
 
 ```
 SETUP.md
@@ -103,10 +92,10 @@ SETUP.md
 ### Modifying note validation
 
 1. Update `scripts/commit-changes.sh` (validates frontmatter)
-2. Update `skills/chaos/SKILL.md` to reflect new rules
+2. Update `SKILL.md` to reflect new rules
 
 ### Adding a new script
 
 1. Create `scripts/your-script.sh`
-2. Follow pattern: validate → modify → git pull → git add → git commit → git push
-3. Document in `skills/chaos/SKILL.md`
+2. Follow pattern: validate → modify → git (if enabled)
+3. Document in `SKILL.md`

@@ -1,120 +1,96 @@
 # Chaos Notes Setup Guide
 
-This guide helps you set up Chaos Notes for yourself. The system is designed to be self-hosted with automatic git sync.
+This guide helps you set up Chaos Notes. The skill is designed to be installed in OpenClaw's skills folder, with your notes data stored separately.
 
 ## Prerequisites
 
-- **Git** — for version control
+- **OpenClaw** — installed and running ([openclaw.ai](https://openclaw.ai/))
 - **Bun** — JavaScript runtime ([install](https://bun.sh))
-- **jq** — JSON processor (usually `apt install jq` or `brew install jq`)
+- **jq** — JSON processor (`apt install jq` or `brew install jq`)
 - **ImageMagick** — for image processing (`apt install imagemagick` or `brew install imagemagick`)
 
-## 1. Clone and Configure
+## 1. Install the Skill
+
+Clone the skill into OpenClaw's skills folder:
 
 ```bash
-# Clone the repo
+cd ~/.openclaw/skills
 git clone https://github.com/dooart/chaos.git
-cd chaos
-
-# Install web dependencies
-cd web
-bun install
-cd ..
 ```
 
-## 2. Set Up Your Own GitHub Repository
+## 2. Create Your Data Directory
 
-You'll want your own repo so notes sync to your GitHub account.
-
-### Create a new repo on GitHub
-
-1. Go to https://github.com/new
-2. Create a **private** repository (e.g., `my-chaos` or just `chaos`)
-3. Don't initialize with README (you already have files)
-
-### Switch the remote
+Create a directory for your notes (can be anywhere):
 
 ```bash
-# Remove the original remote
-git remote remove origin
+mkdir -p ~/chaos/notes ~/chaos/assets
+```
 
-# Add your new repo
+## 3. Link Data to Skill
+
+Create a symlink from the skill to your data:
+
+```bash
+ln -s ~/chaos ~/.openclaw/skills/chaos/data
+```
+
+## 4. (Optional) Set Up Git Backup
+
+If you want your notes backed up to GitHub:
+
+### Create a private repo
+
+1. Go to https://github.com/new
+2. Create a **private** repository (e.g., `my-notes`)
+3. Don't initialize with README
+
+### Initialize and push
+
+```bash
+cd ~/chaos
+git init
+git add .
+git commit -m "Initial commit"
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-
-# Push
 git push -u origin main
 ```
 
-## 3. Git Authentication
+### Git authentication
 
-The scripts auto-commit and push changes. You need git configured to push without prompts.
+For the scripts to auto-push, git needs to work without prompts:
 
-### Option A: Running on your local machine
+**Local machine:** Your normal git credentials should work.
 
-If you're running Chaos on your own computer, your normal git credentials should work:
-
-```bash
-# Check if you can push
-git push
-
-# If not, configure git credentials
-git config --global credential.helper store
-# Then push once manually to save credentials
-```
-
-### Option B: Running on a remote server (exe.dev, VPS, etc.)
-
-For remote servers, use a GitHub Personal Access Token (PAT):
-
+**Remote server:** Use a Personal Access Token (PAT):
 1. Go to https://github.com/settings/tokens
-2. Click "Generate new token (classic)"
-3. Give it a name like "chaos-notes-server"
-4. Select scopes: `repo` (full control of private repositories)
-5. Generate and copy the token
+2. Generate a token with `repo` scope
+3. Set the remote URL with the token:
+   ```bash
+   git remote set-url origin https://YOUR_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/YOUR_REPO.git
+   ```
 
-Configure the remote with the token:
+## 5. Install Web Dependencies
 
 ```bash
-# Set remote URL with token embedded
-git remote set-url origin https://YOUR_GITHUB_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/YOUR_REPO.git
-
-# Verify it works
-git push
+cd ~/.openclaw/skills/chaos/web
+bun install
 ```
 
-> **Security note:** The token is stored in `.git/config`. Keep your server secure.
-
-### Option C: Using a robot account (recommended for teams)
-
-Create a dedicated GitHub account for automation:
-
-1. Create a new GitHub account (e.g., `yourname-bot`)
-2. Add it as a collaborator to your repo
-3. Generate a PAT for the bot account
-4. Use the bot's credentials in the remote URL
-
-This keeps your personal account separate from automation.
-
-## 4. Configure Web UI Authentication
-
-The web UI requires authentication. Create the config file:
+## 6. Configure Web UI Authentication
 
 ```bash
-# Create .env file
-cat > web/.env << 'EOF'
+cat > ~/.openclaw/skills/chaos/web/.env << 'EOF'
 AUTH_USER=your_username
 AUTH_PASSWORD=your_secure_password
 EOF
 ```
 
-Choose a strong password — this protects your notes if the web UI is exposed.
+## 7. Start the Web Server
 
-## 5. Start the Web Server
-
-### For development/testing
+### For testing
 
 ```bash
-cd web
+cd ~/.openclaw/skills/chaos/web
 bun run server.ts
 ```
 
@@ -122,105 +98,58 @@ Access at http://localhost:24680/chaos/
 
 ### For production
 
-Run the server as a persistent service so it survives reboots. How you do this depends on your system:
-
-- **systemd (Linux):** Create a service unit that runs `bun run server.ts` from the `web/` directory
-- **launchd (macOS):** Create a plist for the bun process
-- **Docker:** Wrap in a container
-- **Process manager:** Use pm2, supervisor, etc.
-
-The key requirements:
-- Working directory: `<chaos>/web`
+Run the server as a persistent service. The key requirements:
+- Working directory: `~/.openclaw/skills/chaos/web`
 - Command: `bun run server.ts`
 - Ensure bun is in PATH
 
-## 6. Configure Your AI Agent
+How you do this depends on your system (systemd, launchd, pm2, etc.).
 
-Chaos Notes is designed to work with [OpenClaw](https://openclaw.ai/) — an AI agent that runs on your own hardware and can manage files, run commands, and work with your notes.
+## 8. (Optional) Set External URL
 
-### Setting up OpenClaw
-
-1. Install OpenClaw following the instructions at [openclaw.ai](https://openclaw.ai/)
-2. Symlink the skill to OpenClaw's shared skills folder:
-   ```bash
-   ln -s /path/to/chaos/skills/chaos ~/.openclaw/skills/chaos
-   ```
-
-Once configured, you can ask OpenClaw things like:
-- "Create a note about project ideas"
-- "Search my notes for anything about AI"
-- "Update my todo note with a new item"
-
-The skill file at `skills/chaos/SKILL.md` teaches the agent how to create, edit, search, and manage your notes using the scripts.
-
-### Other AI Assistants
-
-The skill file format is compatible with [AgentSkills](https://skill.md). Other AI assistants that support this format can use `skills/chaos/SKILL.md`.
-
-## 7. Configure the Skill File
-
-Update the skill file with your paths and URLs:
+If running on a remote server and you want the agent to share clickable links:
 
 ```bash
-# Edit the skill file
-vim skills/chaos/SKILL.md
-
-# Replace __CHAOS_HOME__ with your actual chaos directory
-# Example: /home/alice/chaos
-
-# Replace __EXTERNAL_URL__ with your server's external address (if remote)
-# Example: https://myserver.com:8000
+echo 'export CHAOS_EXTERNAL_URL="https://your-server.com:8000"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-This lets the agent find scripts and construct permalinks correctly.
+## Verify Setup
 
-## 8. Clean Up Template Notes
-
-Delete any example notes and create your first real note:
+Test that everything works:
 
 ```bash
-# List notes
-ls notes/
+# Check data directory
+ls ~/.openclaw/skills/chaos/data/notes/
 
-# Delete example notes (if any)
-./scripts/delete-note.sh <note-id>
+# Create a test note
+~/.openclaw/skills/chaos/scripts/new-note.sh "Test Note"
 
-# Create your first note
-./scripts/new-note.sh "Welcome to My Notes"
+# Search for it
+~/.openclaw/skills/chaos/scripts/search-notes.sh "test"
 ```
 
 ## Troubleshooting
 
+### Scripts fail with "data/notes directory not found"
+
+The data symlink isn't set up. Create it:
+```bash
+ln -s /path/to/your/data ~/.openclaw/skills/chaos/data
+```
+
 ### Scripts fail with "bun not found"
 
 Ensure bun is in your PATH:
-
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
 ```
 
-Add to your `.bashrc` or `.zshrc` for persistence.
-
 ### Git push fails
 
 Check your remote URL and credentials:
-
 ```bash
+cd ~/chaos  # or wherever your data is
 git remote -v
 git push -v
-```
-
-### Web server won't start
-
-Check for missing .env:
-
-```bash
-cat web/.env
-# Should have AUTH_USER and AUTH_PASSWORD
-```
-
-Check if port is in use:
-
-```bash
-lsof -i :24680
 ```

@@ -2,27 +2,35 @@
 
 A minimal, file-based personal knowledge system designed for AI-assisted workflows.
 
-Recommended setup: [OpenClaw](https://openclaw.ai/) and [exe.dev](https://exe.dev).
-
 ## Features
 
 - **One note per idea** — notes evolve in place, no separate drafts
 - **Stable IDs** — 21-character nanoid that never changes, even when renaming
 - **Minimal metadata** — just id, title, optional status and tags
-- **Git-backed** — every change is committed and pushed automatically
-- **AI-native** — designed for agents to read and write notes via scripts
+- **Git-backed** — optional automatic commit and push
+- **AI-native** — designed for [OpenClaw](https://openclaw.ai/) agents
 - **Web UI** — simple React app for human access
+
+## Installation
+
+```bash
+cd ~/.openclaw/skills
+git clone https://github.com/dooart/chaos.git
+```
+
+See [SETUP.md](SETUP.md) for full configuration instructions.
 
 ## Structure
 
 ```
-chaos/
-├── notes/          # All notes as <id>-<slug>.md
-├── assets/         # Images (webp) with metadata
-├── scripts/        # Automation scripts (create, update, delete, search)
-├── skills/         # AI agent skill definitions
-├── web/            # React web UI + Hono server
-└── tests/          # Test files
+chaos/                  # Skill directory
+├── SKILL.md           # Agent instructions
+├── SETUP.md           # Setup guide
+├── scripts/           # Automation scripts
+├── web/               # React web UI + server
+└── data/              # Symlink to your data
+    ├── notes/         # Your notes
+    └── assets/        # Images
 ```
 
 ## Note Format
@@ -42,7 +50,12 @@ Markdown body with [[links]] to other notes by ID.
 
 ## Quick Start
 
-See [SETUP.md](SETUP.md) for full installation and configuration instructions.
+After setup, ask your OpenClaw agent:
+- "Create a note about project ideas"
+- "Search my notes for anything about AI"
+- "Update my todo note with a new item"
+
+Or use scripts directly:
 
 ```bash
 # Create a note
@@ -54,10 +67,6 @@ See [SETUP.md](SETUP.md) for full installation and configuration instructions.
 # Start the web UI
 cd web && bun run server.ts
 ```
-
-## For AI Agents
-
-See [AGENTS.md](AGENTS.md) for guidance on working with this codebase, and [skills/chaos/SKILL.md](skills/chaos/SKILL.md) for the full note management API.
 
 ## License
 

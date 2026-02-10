@@ -7,9 +7,11 @@ import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CHAOS_ROOT = dirname(__dirname);
-const NOTES_DIR = join(CHAOS_ROOT, "notes");
-const SCRIPTS_DIR = join(CHAOS_ROOT, "scripts");
+const SKILL_ROOT = dirname(__dirname);
+const DATA_DIR = join(SKILL_ROOT, "data");
+const NOTES_DIR = join(DATA_DIR, "notes");
+const ASSETS_DIR = join(DATA_DIR, "assets");
+const SCRIPTS_DIR = join(SKILL_ROOT, "scripts");
 
 // Load auth from .env (required)
 const envPath = join(__dirname, ".env");
@@ -92,7 +94,7 @@ app.get("/chaos/logout", (c) => {
 function runScript(script: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
     const proc = spawn("bash", [join(SCRIPTS_DIR, script), ...args], {
-      cwd: CHAOS_ROOT,
+      cwd: SKILL_ROOT,
     });
     let stdout = "";
     let stderr = "";
@@ -351,7 +353,7 @@ app.get("/chaos/assets/:filename", async (c) => {
   const filename = c.req.param("filename");
 
   // Prefer user assets (images)
-  const userAssetPath = join(CHAOS_ROOT, "assets", filename);
+  const userAssetPath = join(ASSETS_DIR, filename);
   const userFile = Bun.file(userAssetPath);
   if (await userFile.exists()) {
     return new Response(userFile, { headers: { "Content-Type": "image/webp" } });

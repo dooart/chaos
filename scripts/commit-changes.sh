@@ -11,7 +11,8 @@ fi
 
 FILE="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CHAOS_ROOT="$(dirname "$SCRIPT_DIR")"
+SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
+DATA_DIR="$SKILL_ROOT/data"
 export PATH="$HOME/.bun/bin:$PATH"
 
 if [ ! -f "$FILE" ]; then
@@ -75,11 +76,14 @@ fi
 # Extract slug for commit message
 SLUG=$(echo "$FILENAME" | sed "s/^${ID}-//" | sed 's/\.md$//')
 
-# Pull, add, commit, push
-cd "$CHAOS_ROOT"
-git pull --rebase 2>/dev/null || true
-git add "$FILE"
-git commit -m "updated note $ID-$SLUG"
-git push
-
-echo "committed $FILE"
+# Git operations (only if data dir has .git)
+if [ -d "$DATA_DIR/.git" ]; then
+  cd "$DATA_DIR"
+  git pull --rebase 2>/dev/null || true
+  git add "$FILE"
+  git commit -m "updated note $ID-$SLUG"
+  git push
+  echo "committed $FILE"
+else
+  echo "updated $FILE"
+fi

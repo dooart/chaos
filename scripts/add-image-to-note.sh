@@ -14,9 +14,10 @@ SRC="$2"
 DESC="$3"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CHAOS_ROOT="$(dirname "$SCRIPT_DIR")"
-NOTES_DIR="$CHAOS_ROOT/notes"
-ASSETS_DIR="$CHAOS_ROOT/assets"
+SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
+DATA_DIR="$SKILL_ROOT/data"
+NOTES_DIR="$DATA_DIR/notes"
+ASSETS_DIR="$DATA_DIR/assets"
 
 if [ ! -f "$SRC" ]; then
   echo "Error: image not found: $SRC" >&2
@@ -70,12 +71,14 @@ if [ -z "$ID_FM" ] || [ -z "$TITLE_FM" ]; then
   exit 1
 fi
 
-# Commit all together
-cd "$CHAOS_ROOT"
-git pull --rebase 2>/dev/null || true
-git add "$NOTE_FILE" "$OUT_WEBP" "$OUT_META"
-SLUG=$(basename "$NOTE_FILE" | sed "s/^${ID}-//" | sed 's/\.md$//')
-git commit -m "updated note ${ID}-${SLUG} with image"
-git push
+# Git operations (only if data dir has .git)
+if [ -d "$DATA_DIR/.git" ]; then
+  cd "$DATA_DIR"
+  git pull --rebase 2>/dev/null || true
+  git add "$NOTE_FILE" "$OUT_WEBP" "$OUT_META"
+  SLUG=$(basename "$NOTE_FILE" | sed "s/^${ID}-//" | sed 's/\.md$//')
+  git commit -m "updated note ${ID}-${SLUG} with image"
+  git push
+fi
 
 echo "added image ${BASE}.webp to $NOTE_FILE"

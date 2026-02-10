@@ -15,9 +15,15 @@ set -e
 #   update-note.sh abc123 --status=clear "Content"  # removes status field
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CHAOS_ROOT="$(dirname "$SCRIPT_DIR")"
-NOTES_DIR="$CHAOS_ROOT/notes"
+SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
+DATA_DIR="$SKILL_ROOT/data"
+NOTES_DIR="$DATA_DIR/notes"
 export PATH="$HOME/.bun/bin:$PATH"
+
+if [ ! -d "$NOTES_DIR" ]; then
+  echo "Error: data/notes directory not found. Run setup first." >&2
+  exit 1
+fi
 
 # Parse arguments
 ID=""

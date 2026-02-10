@@ -7,6 +7,16 @@ description: Manage personal notes in the Chaos Notes system. Use this skill whe
 
 A minimal, file-based personal knowledge system for managing notes. Every note is a markdown file with stable IDs that never change.
 
+## Prerequisites
+
+Before using this skill, verify the data directory is configured:
+
+```bash
+ls -la {baseDir}/data/notes/
+```
+
+If `data` doesn't exist or isn't a valid symlink, the user needs to run setup. Guide them to `{baseDir}/SETUP.md`.
+
 ## When to Use This Skill
 
 Activate this skill when the user:
@@ -22,16 +32,19 @@ Activate this skill when the user:
 ## Directory Structure
 
 ```
-__CHAOS_HOME__/
-├── notes/          # All notes live here
+{baseDir}/
+├── SKILL.md        # This file
+├── SETUP.md        # Setup instructions
 ├── scripts/        # Automation scripts
-├── skills/         # This skill
-└── web/            # Web UI (for human use, not agents)
+├── web/            # Web UI server
+└── data/           # Symlink to user's data directory
+    ├── notes/      # All notes live here
+    └── assets/     # Images with metadata
 ```
 
 ## Note Format
 
-Notes are markdown files named `<id>-<slug>.md` in `__CHAOS_HOME__/notes/`.
+Notes are markdown files named `<id>-<slug>.md` in `{baseDir}/data/notes/`.
 
 ```markdown
 ---
@@ -63,19 +76,19 @@ Markdown body...
 
 ## Scripts
 
-All scripts are in `__CHAOS_HOME__/scripts/`. They handle git commits automatically.
+All scripts are in `{baseDir}/scripts/`. If the data directory has a `.git` folder, scripts will auto-commit and push changes.
 
 ### Create a New Note
 
 ```bash
-__CHAOS_HOME__/scripts/new-note.sh "Note Title"
+{baseDir}/scripts/new-note.sh "Note Title"
 ```
 
-Creates a new note with generated ID, commits it, and prints the file path.
+Creates a new note with generated ID, commits it (if git enabled), and prints the file path.
 
 ### Update a Note
 
-**Important:** don’t pass literal `\n` in a quoted string — it will render as backslash-n. Use a heredoc or temp file.
+**Important:** don't pass literal `\n` in a quoted string — it will render as backslash-n. Use a heredoc or temp file.
 
 ```bash
 # Update content only (preferred)
@@ -84,22 +97,22 @@ cat > /tmp/note.md <<'EOF'
 
 Real newlines here.
 EOF
-__CHAOS_HOME__/scripts/update-note.sh "<id>" "$(cat /tmp/note.md)"
+{baseDir}/scripts/update-note.sh "<id>" "$(cat /tmp/note.md)"
 
 # Update status only (keeps existing content)
-__CHAOS_HOME__/scripts/update-note.sh "<id>" --status=building
+{baseDir}/scripts/update-note.sh "<id>" --status=building
 
 # Update tags only
-__CHAOS_HOME__/scripts/update-note.sh "<id>" --tags=tag1,tag2
+{baseDir}/scripts/update-note.sh "<id>" --tags=tag1,tag2
 
 # Update everything
-__CHAOS_HOME__/scripts/update-note.sh "<id>" --status=done --tags=project,shipped "Final content here"
+{baseDir}/scripts/update-note.sh "<id>" --status=done --tags=project,shipped "Final content here"
 
 # Clear status (remove from frontmatter)
-__CHAOS_HOME__/scripts/update-note.sh "<id>" --status=clear
+{baseDir}/scripts/update-note.sh "<id>" --status=clear
 
 # Clear tags
-__CHAOS_HOME__/scripts/update-note.sh "<id>" --tags=
+{baseDir}/scripts/update-note.sh "<id>" --tags=
 ```
 
 Options:
@@ -110,7 +123,7 @@ Options:
 ### Rename a Note
 
 ```bash
-__CHAOS_HOME__/scripts/rename-note.sh "<id>" "New Title"
+{baseDir}/scripts/rename-note.sh "<id>" "New Title"
 ```
 
 Updates the title in frontmatter and renames the file. The ID stays the same.
@@ -118,30 +131,30 @@ Updates the title in frontmatter and renames the file. The ID stays the same.
 ### Delete a Note
 
 ```bash
-__CHAOS_HOME__/scripts/delete-note.sh "<id>"
+{baseDir}/scripts/delete-note.sh "<id>"
 ```
 
 ### Add an Image to a Note
 
 ```bash
-__CHAOS_HOME__/scripts/add-image-to-note.sh "<id>" "/path/to/image.jpg" "description of the image"
+{baseDir}/scripts/add-image-to-note.sh "<id>" "/path/to/image.jpg" "description of the image"
 ```
 
 - Converts to webp (quality 95), auto-orients, strips EXIF, resizes to max 2048px
-- Saves image + sibling metadata `.md` in `__CHAOS_HOME__/assets/`
+- Saves image + sibling metadata `.md` in `{baseDir}/data/assets/`
 - Appends markdown image link to the note
-- Commits note + image + metadata together
+- Commits note + image + metadata together (if git enabled)
 
 ### List Notes
 
 ```bash
-ls -la __CHAOS_HOME__/notes/
+ls -la {baseDir}/data/notes/
 ```
 
 ### Search Notes
 
 ```bash
-__CHAOS_HOME__/scripts/search-notes.sh "search term"
+{baseDir}/scripts/search-notes.sh "search term"
 ```
 
 Returns JSON array of matching notes with id, title, status, tags, filename, and path.
@@ -156,7 +169,7 @@ Example output:
 ### Read a Note
 
 ```bash
-cat __CHAOS_HOME__/notes/<id>-<slug>.md
+cat {baseDir}/data/notes/<id>-<slug>.md
 ```
 
 ## Status Values
@@ -167,18 +180,26 @@ cat __CHAOS_HOME__/notes/<id>-<slug>.md
 
 ## Important Notes
 
-1. **Always use the scripts** for create/rename/delete — they handle git commits
+1. **Always use the scripts** for create/rename/delete — they handle validation and git
 2. **IDs are permanent** — never change an ID, only the title/slug can change
 3. **One note per idea** — notes evolve in place, no separate drafts
-4. **Git-backed** — all changes are committed and pushed automatically
+4. **Git is optional** — if `data/.git` exists, changes are committed and pushed automatically
 5. **Web UI exists** at `/chaos/` for human use (agents should use scripts)
 6. **Permalinks** — path to a note: `/chaos/note/<id>`
 
-## Web UI Access
+## Web UI URLs
 
-The web server runs on port 24680 by default.
+To share note links, you need the base URL where the user accesses the web UI.
 
-- **Local:** `http://localhost:24680/chaos/`
-- **External:** `__EXTERNAL_URL__/chaos/`
+Check if configured:
+```bash
+echo $CHAOS_EXTERNAL_URL
+```
 
-Replace `__EXTERNAL_URL__` with your actual server address (e.g., `https://myserver.com:8000`) so permalinks work for the user.
+If empty, figure out the appropriate URL based on where you're running:
+- Local machine: likely `http://localhost:24680`
+- Remote server: ask the user what URL they use to access it
+
+Once you know it, save it as a persistent environment variable so you don't have to ask again.
+
+Permalinks are: `$CHAOS_EXTERNAL_URL/chaos/note/<id>`
