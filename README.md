@@ -33,9 +33,9 @@ cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 cd /path/to/skills && git clone https://github.com/dooart/chaos.git
 ```
 
-Follows the [AgentSkills](https://skill.md) format supported by most AI coding agents.
+**❗ After cloning, you must complete setup.** See **[SETUP.md](SETUP.md)** to configure your data directory, web UI, and optional git backup.
 
-See [SETUP.md](SETUP.md) for full configuration instructions.
+Follows the [AgentSkills](https://skill.md) format supported by most AI coding agents.
 
 ## Structure
 

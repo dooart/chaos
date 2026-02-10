@@ -19,9 +19,11 @@ cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
 # Claude Code
 cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 
-# Codex / others
-git clone https://github.com/dooart/chaos.git /path/to/skills/chaos
+# Other agents
+cd /path/to/your/skills && git clone https://github.com/dooart/chaos.git
 ```
+
+The examples below use `~/.openclaw/skills/chaos` — adjust the path for your agent.
 
 ## 2. Create Your Data Directory
 
@@ -36,7 +38,7 @@ mkdir -p ~/chaos-data/notes ~/chaos-data/assets
 Create a symlink from the skill to your data:
 
 ```bash
-ln -s ~/chaos-data /path/to/chaos/data
+ln -s ~/chaos-data ~/.openclaw/skills/chaos/data
 ```
 
 ## 4. (Optional) Set Up Git Backup
@@ -77,14 +79,14 @@ For the scripts to auto-push, git needs to work without prompts:
 ## 5. Install Web Dependencies
 
 ```bash
-cd /path/to/chaos/web
+cd ~/.openclaw/skills/chaos/web
 bun install
 ```
 
 ## 6. Configure Web UI Authentication
 
 ```bash
-cat > /path/to/chaos/web/.env << 'EOF'
+cat > ~/.openclaw/skills/chaos/web/.env << 'EOF'
 AUTH_USER=your_username
 AUTH_PASSWORD=your_secure_password
 EOF
@@ -95,7 +97,7 @@ EOF
 ### For testing
 
 ```bash
-cd /path/to/chaos/web
+cd ~/.openclaw/skills/chaos/web
 bun run server.ts
 ```
 
@@ -104,7 +106,7 @@ Access at http://localhost:24680/chaos/
 ### For production
 
 Run the server as a persistent service. The key requirements:
-- Working directory: `/path/to/chaos/web`
+- Working directory: `~/.openclaw/skills/chaos/web`
 - Command: `bun run server.ts`
 - Ensure bun is in PATH
 
@@ -135,13 +137,13 @@ Test that everything works:
 
 ```bash
 # Check data directory
-ls /path/to/chaos/data/notes/
+ls ~/.openclaw/skills/chaos/data/notes/
 
 # Create a test note
-/path/to/chaos/scripts/new-note.sh "Test Note"
+~/.openclaw/skills/chaos/scripts/new-note.sh "Test Note"
 
 # Search for it
-/path/to/chaos/scripts/search-notes.sh "test"
+~/.openclaw/skills/chaos/scripts/search-notes.sh "test"
 ```
 
 ## Troubleshooting
@@ -150,7 +152,7 @@ ls /path/to/chaos/data/notes/
 
 The data symlink isn't set up. Create it:
 ```bash
-ln -s /path/to/your/data /path/to/chaos/data
+ln -s ~/chaos-data ~/.openclaw/skills/chaos/data
 ```
 
 ### Scripts fail with "bun not found"
@@ -164,7 +166,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 
 Check your remote URL and credentials:
 ```bash
-cd /path/to/your/data
+cd ~/chaos-data
 git remote -v
 git push -v
 ```
