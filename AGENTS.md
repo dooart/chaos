@@ -4,7 +4,7 @@ This file helps AI coding assistants work on the Chaos Notes codebase.
 
 ## Overview
 
-Chaos Notes is an OpenClaw skill for managing personal notes. Notes are markdown files with stable IDs, managed via bash scripts.
+Chaos Notes is a skill/tool for managing personal notes. It works with any AI agent that can run shell commands (OpenClaw, Claude Code, Codex, etc.). Notes are markdown files with stable IDs, managed via bash scripts.
 
 ## Key Directories
 

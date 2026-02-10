@@ -1,21 +1,26 @@
 # Chaos Notes Setup Guide
 
-This guide helps you set up Chaos Notes. The skill is designed to be installed in OpenClaw's skills folder, with your notes data stored separately.
+This guide helps you set up Chaos Notes. The skill can be used with any AI agent that can run shell commands (OpenClaw, Claude Code, Codex, etc.).
 
 ## Prerequisites
 
-- **OpenClaw** — installed and running ([openclaw.ai](https://openclaw.ai/))
 - **Bun** — JavaScript runtime ([install](https://bun.sh))
 - **jq** — JSON processor (`apt install jq` or `brew install jq`)
 - **ImageMagick** — for image processing (`apt install imagemagick` or `brew install imagemagick`)
 
 ## 1. Install the Skill
 
-Clone the skill into OpenClaw's skills folder:
+Clone the skill to a location your agent can access:
 
 ```bash
-cd ~/.openclaw/skills
-git clone https://github.com/dooart/chaos.git
+# OpenClaw
+cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
+
+# Claude Code (add to project or home)
+git clone https://github.com/dooart/chaos.git ~/chaos-skill
+
+# Or anywhere accessible to your agent
+git clone https://github.com/dooart/chaos.git /path/to/chaos
 ```
 
 ## 2. Create Your Data Directory
@@ -23,7 +28,7 @@ git clone https://github.com/dooart/chaos.git
 Create a directory for your notes (can be anywhere):
 
 ```bash
-mkdir -p ~/chaos/notes ~/chaos/assets
+mkdir -p ~/chaos-data/notes ~/chaos-data/assets
 ```
 
 ## 3. Link Data to Skill
@@ -31,7 +36,7 @@ mkdir -p ~/chaos/notes ~/chaos/assets
 Create a symlink from the skill to your data:
 
 ```bash
-ln -s ~/chaos ~/.openclaw/skills/chaos/data
+ln -s ~/chaos-data /path/to/chaos/data
 ```
 
 ## 4. (Optional) Set Up Git Backup
@@ -47,7 +52,7 @@ If you want your notes backed up to GitHub:
 ### Initialize and push
 
 ```bash
-cd ~/chaos
+cd ~/chaos-data
 git init
 git add .
 git commit -m "Initial commit"
@@ -72,14 +77,14 @@ For the scripts to auto-push, git needs to work without prompts:
 ## 5. Install Web Dependencies
 
 ```bash
-cd ~/.openclaw/skills/chaos/web
+cd /path/to/chaos/web
 bun install
 ```
 
 ## 6. Configure Web UI Authentication
 
 ```bash
-cat > ~/.openclaw/skills/chaos/web/.env << 'EOF'
+cat > /path/to/chaos/web/.env << 'EOF'
 AUTH_USER=your_username
 AUTH_PASSWORD=your_secure_password
 EOF
@@ -90,7 +95,7 @@ EOF
 ### For testing
 
 ```bash
-cd ~/.openclaw/skills/chaos/web
+cd /path/to/chaos/web
 bun run server.ts
 ```
 
@@ -99,7 +104,7 @@ Access at http://localhost:24680/chaos/
 ### For production
 
 Run the server as a persistent service. The key requirements:
-- Working directory: `~/.openclaw/skills/chaos/web`
+- Working directory: `/path/to/chaos/web`
 - Command: `bun run server.ts`
 - Ensure bun is in PATH
 
@@ -114,19 +119,27 @@ echo 'export CHAOS_EXTERNAL_URL="https://your-server.com:8000"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
+## 9. Point Your Agent to the Skill
+
+Tell your agent where to find the skill file:
+
+- **OpenClaw:** Automatically discovers skills in `~/.openclaw/skills/`
+- **Claude Code:** Add to your project's `CLAUDE.md` or reference the path
+- **Other agents:** Point to `SKILL.md` in your agent's tool/skill configuration
+
 ## Verify Setup
 
 Test that everything works:
 
 ```bash
 # Check data directory
-ls ~/.openclaw/skills/chaos/data/notes/
+ls /path/to/chaos/data/notes/
 
 # Create a test note
-~/.openclaw/skills/chaos/scripts/new-note.sh "Test Note"
+/path/to/chaos/scripts/new-note.sh "Test Note"
 
 # Search for it
-~/.openclaw/skills/chaos/scripts/search-notes.sh "test"
+/path/to/chaos/scripts/search-notes.sh "test"
 ```
 
 ## Troubleshooting
@@ -135,7 +148,7 @@ ls ~/.openclaw/skills/chaos/data/notes/
 
 The data symlink isn't set up. Create it:
 ```bash
-ln -s /path/to/your/data ~/.openclaw/skills/chaos/data
+ln -s /path/to/your/data /path/to/chaos/data
 ```
 
 ### Scripts fail with "bun not found"
@@ -149,7 +162,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 
 Check your remote URL and credentials:
 ```bash
-cd ~/chaos  # or wherever your data is
+cd /path/to/your/data
 git remote -v
 git push -v
 ```
