@@ -119,13 +119,15 @@ echo 'export CHAOS_EXTERNAL_URL="https://your-server.com:8000"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 9. Point Your Agent to the Skill
+## 9. Verify Your Agent Discovers the Skill
 
-Most agents auto-discover skills in their skills directory:
+Most agents auto-discover skills from their skills directory:
 
-- **OpenClaw:** Auto-discovers from `~/.openclaw/skills/`
-- **Claude Code:** Auto-discovers from `~/.claude/skills/` (see [skills docs](https://code.claude.com/docs/en/skills))
-- **Other agents:** Point to `SKILL.md` in your agent's tool/skill configuration
+- **OpenClaw:** `~/.openclaw/skills/`
+- **Claude Code:** `~/.claude/skills/` (see [docs](https://code.claude.com/docs/en/skills))
+- **Other agents:** Check your agent's docs for the skills directory location
+
+The skill follows the [AgentSkills](https://skill.md) format, which is supported by most AI coding agents.
 
 ## Verify Setup
 

@@ -29,9 +29,11 @@ cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
 # Claude Code
 cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 
-# Others
-git clone https://github.com/dooart/chaos.git /path/to/skills/chaos
+# Other agents - check your agent's docs for skills directory
+cd /path/to/skills && git clone https://github.com/dooart/chaos.git
 ```
+
+Follows the [AgentSkills](https://skill.md) format supported by most AI coding agents.
 
 See [SETUP.md](SETUP.md) for full configuration instructions.
 
