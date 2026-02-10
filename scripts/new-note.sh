@@ -12,14 +12,9 @@ fi
 
 TITLE="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$SKILL_ROOT/data"
-NOTES_DIR="$DATA_DIR/notes"
 
-if [ ! -d "$NOTES_DIR" ]; then
-  echo "Error: data/notes directory not found. Run setup first." >&2
-  exit 1
-fi
+# Ensure data directory exists
+source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 # Generate nanoid (21 chars, lowercase alphanumeric)
 ID=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 21 | head -n 1)

@@ -7,15 +7,11 @@ description: Manage personal notes in the Chaos Notes system. Use this skill whe
 
 A minimal, file-based personal knowledge system for managing notes. Every note is a markdown file with stable IDs that never change.
 
-## Prerequisites
+## Data Directory
 
-Before using this skill, verify the data directory is configured:
+Notes are stored at `~/.chaos`. The data directory and symlink are created automatically when you first run any script.
 
-```bash
-ls -la {baseDir}/data/notes/
-```
-
-If `data` doesn't exist or isn't a valid symlink, the user needs to run setup. Guide them to `{baseDir}/SETUP.md`.
+If the web server isn't running or dependencies are missing, guide the user to `{baseDir}/SETUP.md`.
 
 ## When to Use This Skill
 

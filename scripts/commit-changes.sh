@@ -11,9 +11,10 @@ fi
 
 FILE="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$SKILL_ROOT/data"
 export PATH="$HOME/.bun/bin:$PATH"
+
+# Ensure data directory exists
+source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 if [ ! -f "$FILE" ]; then
   echo "Error: file '$FILE' not found" >&2

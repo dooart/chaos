@@ -14,10 +14,9 @@ SRC="$2"
 DESC="$3"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$SKILL_ROOT/data"
-NOTES_DIR="$DATA_DIR/notes"
-ASSETS_DIR="$DATA_DIR/assets"
+
+# Ensure data directory exists
+source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 if [ ! -f "$SRC" ]; then
   echo "Error: image not found: $SRC" >&2

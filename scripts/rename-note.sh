@@ -12,15 +12,10 @@ fi
 ID="$1"
 NEW_TITLE="$2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$SKILL_ROOT/data"
-NOTES_DIR="$DATA_DIR/notes"
 export PATH="$HOME/.bun/bin:$PATH"
 
-if [ ! -d "$NOTES_DIR" ]; then
-  echo "Error: data/notes directory not found. Run setup first." >&2
-  exit 1
-fi
+# Ensure data directory exists
+source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 # Find existing file by ID
 OLD_FILE=$(find "$NOTES_DIR" -name "${ID}-*.md" -type f | head -n 1)

@@ -11,15 +11,10 @@ fi
 
 QUERY="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$SKILL_ROOT/data"
-NOTES_DIR="$DATA_DIR/notes"
 export PATH="$HOME/.bun/bin:$PATH"
 
-if [ ! -d "$NOTES_DIR" ]; then
-  echo "Error: data/notes directory not found. Run setup first." >&2
-  exit 1
-fi
+# Ensure data directory exists
+source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 # Find matching files
 MATCHES=$(grep -ril "$QUERY" "$NOTES_DIR"/*.md 2>/dev/null | sort -u)

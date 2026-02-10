@@ -33,7 +33,7 @@ cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 cd /path/to/skills && git clone https://github.com/dooart/chaos.git
 ```
 
-**❗ After cloning, you must complete setup.** See **[SETUP.md](SETUP.md)** to configure your data directory, web UI, and optional git backup.
+**❗ After cloning, complete setup.** See **[SETUP.md](SETUP.md)** to configure the web UI and optional git backup. The data directory (`~/.chaos`) is created automatically on first use.
 
 Follows the [AgentSkills](https://skill.md) format supported by most AI coding agents.
 

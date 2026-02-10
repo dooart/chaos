@@ -23,65 +23,14 @@ cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
 cd /path/to/skills && git clone https://github.com/dooart/chaos.git
 ```
 
-## 2. Create the Data Directory
-
-Data is stored at `~/.chaos` by default:
-
-```bash
-mkdir -p ~/.chaos/notes ~/.chaos/assets
-```
-
-## 3. Link Data to Skill
-
-Create a symlink from the skill to your data:
-
-```bash
-ln -s ~/.chaos /path/to/skills/chaos/data
-```
-
-## 4. (Optional) Set Up Git Backup
-
-If you want your notes backed up to GitHub:
-
-### Create a private repo
-
-1. Go to https://github.com/new
-2. Create a **private** repository (e.g., `my-notes`)
-3. Don't initialize with README
-
-### Initialize and push
-
-```bash
-cd ~/.chaos
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
-
-### Git authentication
-
-For the scripts to auto-push, git needs to work without prompts:
-
-**Local machine:** Your normal git credentials should work.
-
-**Remote server:** Use a Personal Access Token (PAT):
-1. Go to https://github.com/settings/tokens
-2. Generate a token with `repo` scope
-3. Set the remote URL with the token:
-   ```bash
-   git remote set-url origin https://YOUR_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/YOUR_REPO.git
-   ```
-
-## 5. Install Web Dependencies
+## 2. Install Web Dependencies
 
 ```bash
 cd /path/to/skills/chaos/web
 bun install
 ```
 
-## 6. Configure Web UI Authentication
+## 3. Configure Web UI Authentication
 
 ```bash
 cat > /path/to/skills/chaos/web/.env << 'EOF'
@@ -90,7 +39,7 @@ AUTH_PASSWORD=your_secure_password
 EOF
 ```
 
-## 7. Start the Web Server
+## 4. Start the Web Server
 
 ### For testing
 
@@ -110,16 +59,41 @@ Run the server as a persistent service. The key requirements:
 
 How you do this depends on your system (systemd, launchd, pm2, etc.).
 
-## 8. (Optional) Set External URL
+## 5. First Run
 
-If running on a remote server and you want the agent to share clickable links:
+The data directory (`~/.chaos`) is created automatically when you first use any script. Just ask the agent to create a note:
 
-```bash
-echo 'export CHAOS_EXTERNAL_URL="https://your-server.com:8000"' >> ~/.bashrc
-source ~/.bashrc
-```
+> "Create a note about my project ideas"
 
-## 9. Verify Your Agent Discovers the Skill
+The script will:
+1. Create `~/.chaos/notes` and `~/.chaos/assets` if they don't exist
+2. Set up the symlink from the skill to the data directory
+3. Create your note
+
+## 6. Agent Configuration
+
+After the first note is created, the agent should ask the user two things:
+
+1. **External URL** (if on a remote server): What URL do you use to access the web UI? This lets the agent share clickable links to notes.
+
+2. **Git backup** (optional): Would you like to back up your notes to a private GitHub repo? If yes, help them set it up:
+   ```bash
+   cd ~/.chaos
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/USERNAME/REPO.git
+   git push -u origin main
+   ```
+   
+   For remote servers, they'll need a Personal Access Token in the URL:
+   ```bash
+   git remote set-url origin https://USERNAME:TOKEN@github.com/USERNAME/REPO.git
+   ```
+
+Once git is set up in `~/.chaos`, all note changes are automatically committed and pushed.
+
+## Verify Your Agent Discovers the Skill
 
 Most agents auto-discover skills from their skills directory:
 
@@ -129,29 +103,7 @@ Most agents auto-discover skills from their skills directory:
 
 The skill follows the [AgentSkills](https://skill.md) format, which is supported by most AI coding agents.
 
-## Verify Setup
-
-Test that everything works:
-
-```bash
-# Check data directory
-ls ~/.chaos/notes/
-
-# Create a test note
-/path/to/skills/chaos/scripts/new-note.sh "Test Note"
-
-# Search for it
-/path/to/skills/chaos/scripts/search-notes.sh "test"
-```
-
 ## Troubleshooting
-
-### Scripts fail with "data/notes directory not found"
-
-The data symlink isn't set up. Create it:
-```bash
-ln -s ~/.chaos /path/to/skills/chaos/data
-```
 
 ### Scripts fail with "bun not found"
 
@@ -167,4 +119,12 @@ Check your remote URL and credentials:
 cd ~/.chaos
 git remote -v
 git push -v
+```
+
+### Web server won't start
+
+Check for missing .env:
+```bash
+cat /path/to/skills/chaos/web/.env
+# Should have AUTH_USER and AUTH_PASSWORD
 ```
