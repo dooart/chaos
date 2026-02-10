@@ -1,0 +1,13 @@
+# Dependencies
+web/node_modules/
+
+# Build
+web/dist/
+
+# Environment
+web/.env
+
+# Misc
+.DS_Store
+*.log
+config/
