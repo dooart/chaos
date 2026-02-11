@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/ensure-data-dir.sh"
 
 # Generate nanoid (21 chars, lowercase alphanumeric)
-ID=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 21 | head -n 1)
+ID=$(LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | fold -w 21 | head -n 1)
 
 # Generate slug from title (lowercase, alphanumeric and hyphens only)
 SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
