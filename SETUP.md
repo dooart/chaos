@@ -45,6 +45,7 @@ EOF
 
 ```bash
 cd /path/to/skills/chaos/web
+bun run build
 bun run server.ts
 ```
 
