@@ -14,13 +14,13 @@ Clone the skill to your agent's skills directory:
 
 ```bash
 # OpenClaw
-cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git ~/.openclaw/skills
 
 # Claude Code
-cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git ~/.claude/skills
 
 # Other agents
-cd /path/to/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git /path/to/skills
 ```
 
 ## 2. Install Web Dependencies
