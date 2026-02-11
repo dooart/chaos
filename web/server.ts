@@ -367,7 +367,7 @@ app.get("/chaos/assets/:filename", async (c) => {
 app.get("/chaos/logo.webp", async (c) => {
   const file = Bun.file(join(__dirname, "dist", "logo.webp"));
   const content = await file.arrayBuffer();
-  return new Response(content, { headers: { "Content-Type": "image/svg+xml" } });
+  return new Response(content, { headers: { "Content-Type": "image/webp" } });
 });
 
 // SPA fallback for non-API routes
