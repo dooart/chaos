@@ -24,13 +24,13 @@ Clone to your agent's skills directory:
 
 ```bash
 # OpenClaw
-cd ~/.openclaw/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git ~/.openclaw/skills
 
 # Claude Code
-cd ~/.claude/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git ~/.claude/skills
 
 # Other agents - check your agent's docs for skills directory
-cd /path/to/skills && git clone https://github.com/dooart/chaos.git
+git clone https://github.com/dooart/chaos.git /path/to/skills
 ```
 
 **❗ After cloning, complete setup.** See **[SETUP.md](SETUP.md)** to configure the web UI and optional git backup. The data directory (`~/.chaos`) is created automatically on first use.
