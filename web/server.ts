@@ -13,19 +13,8 @@ const NOTES_DIR = join(DATA_DIR, "notes");
 const ASSETS_DIR = join(DATA_DIR, "assets");
 const SCRIPTS_DIR = join(SKILL_ROOT, "scripts");
 
-// Load auth from .env (required)
-const envPath = join(__dirname, ".env");
-let AUTH_USER = "";
-let AUTH_PASSWORD = "";
-try {
-  const envContent = await readFile(envPath, "utf-8");
-  const userMatch = envContent.match(/^AUTH_USER=(.*)$/m);
-  const passMatch = envContent.match(/^AUTH_PASSWORD=(.*)$/m);
-  if (userMatch) AUTH_USER = userMatch[1].trim();
-  if (passMatch) AUTH_PASSWORD = passMatch[1].trim();
-} catch {
-  // .env doesn't exist
-}
+const AUTH_USER = process.env.AUTH_USER || "";
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "";
 
 if (!AUTH_USER || !AUTH_PASSWORD) {
   console.error("Error: AUTH_USER and AUTH_PASSWORD must be set in web/.env");
