@@ -360,7 +360,9 @@ function NoteEditor({
       setEditedContent(null)
       setEditedTitle(null)
       setIsEditingTags(false)
+      document.title = `${note.title} - Chaos`
     }
+    return () => { document.title = 'Chaos' }
   }, [noteId, note])
   
   const updateMutation = useMutation({
