@@ -380,7 +380,7 @@ app.get("/*", async (c) => {
   return new Response(file, { headers: { "Content-Type": "text/html" } });
 });
 
-const port = 24680;
+const port = process.env.PORT || 24680;
 console.log(`Chaos server running on http://localhost:${port}`);
 
 export default {
