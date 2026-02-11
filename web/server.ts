@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
+
 import { getCookie, setCookie } from "hono/cookie";
 import { readdir, readFile, writeFile, stat } from "fs/promises";
 import { join, dirname } from "path";
