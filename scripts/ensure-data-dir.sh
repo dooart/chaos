@@ -16,6 +16,11 @@ if [ ! -e "$DATA_LINK" ]; then
   ln -s "$DATA_HOME" "$DATA_LINK"
 fi
 
+# Pull latest if data dir is a git repo
+if [ -d "$DATA_HOME/.git" ]; then
+  git -C "$DATA_HOME" pull --rebase --quiet 2>/dev/null || true
+fi
+
 # Export paths for use by calling script
 export DATA_DIR="$DATA_HOME"
 export NOTES_DIR="$DATA_HOME/notes"
