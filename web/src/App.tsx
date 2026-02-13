@@ -343,7 +343,7 @@ function processInternalLinks(text: string): string {
 
 // Backlog component
 function Backlog({ noteId }: { noteId: string }) {
-  const [tab, setTab] = useState<'pending' | 'done'>('pending')
+  const [tab, setTab] = useState<'pending' | 'done' | 'live'>('pending')
 
   const { data, isLoading } = useQuery({
     queryKey: ['project', noteId],
@@ -389,7 +389,7 @@ function Backlog({ noteId }: { noteId: string }) {
   const doneIds = new Set(stories.filter(s => s.status === 'done').map(s => s.id))
   const pending = stories.filter(s => s.status === 'pending')
   const done = stories.filter(s => s.status === 'done')
-  const visible = tab === 'pending' ? pending : done
+  const visible = tab === 'pending' ? pending : tab === 'done' ? done : []
 
   return (
     <div className="backlog-container">
@@ -406,8 +406,16 @@ function Backlog({ noteId }: { noteId: string }) {
         >
           Done{done.length > 0 && ` (${done.length})`}
         </button>
+        <button
+          className={tab === 'live' ? 'active' : ''}
+          onClick={() => setTab('live')}
+        >
+          Live
+        </button>
       </div>
-      {visible.length === 0 ? (
+      {tab === 'live' ? (
+        <LiveView noteId={noteId} />
+      ) : visible.length === 0 ? (
         <p className="backlog-empty">
           {tab === 'pending' ? 'No pending stories.' : 'No completed stories.'}
         </p>
@@ -619,7 +627,7 @@ function NoteEditor({
   const [tagsInput, setTagsInput] = useState<string>('')
   const [isEditingTags, setIsEditingTags] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog' | 'live'>('preview')
+  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog'>('preview')
   // state sync handled below
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -783,12 +791,6 @@ function NoteEditor({
               >
                 Backlog
               </button>
-              <button
-                className={viewMode === 'live' ? 'active' : ''}
-                onClick={() => setViewMode('live')}
-              >
-                Live
-              </button>
             </>
           )}
         </div>
@@ -819,9 +821,7 @@ function NoteEditor({
         {viewMode === 'backlog' && note.project && (
           <Backlog noteId={noteId} />
         )}
-        {viewMode === 'live' && note.project && (
-          <LiveView noteId={noteId} />
-        )}
+
         <div className={`editor-edit-pane ${viewMode !== 'edit' ? 'pane-hidden' : ''}`}>
           <div className="meta-bar editor-meta-block">
             <div className="meta-item">
