@@ -912,21 +912,22 @@
 .backlog-tabs button {
   background: none;
   border: none;
-  color: #888;
-  padding: 0.5rem 1rem;
+  color: var(--text-muted);
+  padding: 0.75rem 1rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   border-bottom: 2px solid transparent;
   transition: color 0.15s, border-color 0.15s;
 }
 
 .backlog-tabs button:hover {
-  color: #ccc;
+  color: var(--text-soft);
 }
 
 .backlog-tabs button.active {
-  color: #fff;
-  border-bottom-color: #fff;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .backlog-empty {
@@ -936,6 +937,9 @@
   padding: 2rem 0;
   padding-top: 1rem;
   flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .backlog-stories {
@@ -947,6 +951,9 @@
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .backlog-story {
@@ -1046,8 +1053,6 @@
   display: flex;
   align-items: center;
   padding: var(--space-sm) var(--space-lg);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-secondary);
   flex-shrink: 0;
 }
 
@@ -1066,7 +1071,12 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-lg);
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-2xl);
+  border-left: none;
+  background: none;
 }
 
 .live-log-wrapper {
