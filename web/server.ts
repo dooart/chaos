@@ -579,7 +579,7 @@ app.get("/chaos/api/notes/:id/project/stream", async (c) => {
             const s = require("fs").statSync(logPath);
             lastLogMtime = s.mtimeMs;
             lastLogSize = s.size;
-            send("log", { chunk: content, file: currentLogFile, initial: true });
+            send("log", { chunk: content, file: currentLogFile, initial: true, lastModified: s.mtimeMs });
           } catch {}
         }
 
