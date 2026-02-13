@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 
 import { getCookie, setCookie } from "hono/cookie";
-import { readdir, readFile, writeFile, stat } from "fs/promises";
-import { join, dirname } from "path";
+import { readdir, readFile, writeFile, stat, readlink, lstat } from "fs/promises";
+import { join, dirname, resolve } from "path";
+import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 
@@ -243,6 +244,7 @@ app.get("/chaos/api/notes/:id", async (c) => {
       title: frontmatter.title,
       status: frontmatter.status || null,
       tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : [],
+      project: frontmatter.project || null,
       filename,
       content, // raw content for editing
       body,    // body without frontmatter
@@ -335,6 +337,200 @@ app.delete("/chaos/api/notes/:id", async (c) => {
   }
   
   return c.json({ success: true });
+});
+
+// PRD validation
+interface PrdStory {
+  id: number;
+  title: string;
+  description: string;
+  acceptanceCriteria: string[];
+  dependsOn: number[];
+  status: "pending" | "done";
+}
+
+interface PrdFile {
+  stories: PrdStory[];
+}
+
+interface PrdValidationResult {
+  valid: boolean;
+  stories: PrdStory[];
+  errors: string[];
+}
+
+function validatePrd(data: unknown): PrdValidationResult {
+  const errors: string[] = [];
+
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return { valid: false, stories: [], errors: ["prd.json must be a JSON object"] };
+  }
+
+  const obj = data as Record<string, unknown>;
+  if (!Array.isArray(obj.stories)) {
+    return { valid: false, stories: [], errors: ['Missing "stories" array'] };
+  }
+
+  const stories: PrdStory[] = [];
+  const ids = new Set<number>();
+
+  for (let i = 0; i < obj.stories.length; i++) {
+    const s = obj.stories[i] as Record<string, unknown>;
+    const prefix = `stories[${i}]`;
+
+    if (typeof s !== "object" || s === null || Array.isArray(s)) {
+      errors.push(`${prefix}: must be an object`);
+      continue;
+    }
+
+    if (typeof s.id !== "number" || !Number.isInteger(s.id)) {
+      errors.push(`${prefix}: id must be an integer`);
+      continue;
+    }
+
+    if (ids.has(s.id as number)) {
+      errors.push(`${prefix}: duplicate id ${s.id}`);
+    }
+    ids.add(s.id as number);
+
+    if (typeof s.title !== "string" || !s.title.trim()) {
+      errors.push(`${prefix}: title must be a non-empty string`);
+    }
+    if (typeof s.description !== "string") {
+      errors.push(`${prefix}: description must be a string`);
+    }
+    if (!Array.isArray(s.acceptanceCriteria) || !s.acceptanceCriteria.every((c: unknown) => typeof c === "string")) {
+      errors.push(`${prefix}: acceptanceCriteria must be an array of strings`);
+    }
+    if (!Array.isArray(s.dependsOn) || !s.dependsOn.every((d: unknown) => typeof d === "number" && Number.isInteger(d))) {
+      errors.push(`${prefix}: dependsOn must be an array of integers`);
+    }
+    if (s.status !== "pending" && s.status !== "done") {
+      errors.push(`${prefix}: status must be "pending" or "done"`);
+    }
+
+    stories.push({
+      id: s.id as number,
+      title: (s.title as string) || "",
+      description: (s.description as string) || "",
+      acceptanceCriteria: (s.acceptanceCriteria as string[]) || [],
+      dependsOn: (s.dependsOn as number[]) || [],
+      status: s.status as "pending" | "done",
+    });
+  }
+
+  // Check dependsOn references exist
+  for (const story of stories) {
+    for (const dep of story.dependsOn) {
+      if (!ids.has(dep)) {
+        errors.push(`Story ${story.id}: dependsOn references non-existent id ${dep}`);
+      }
+    }
+  }
+
+  // Cycle detection via DFS
+  const adj = new Map<number, number[]>();
+  for (const s of stories) adj.set(s.id, s.dependsOn);
+
+  const visited = new Set<number>();
+  const inStack = new Set<number>();
+
+  function hasCycle(id: number): boolean {
+    if (inStack.has(id)) return true;
+    if (visited.has(id)) return false;
+    visited.add(id);
+    inStack.add(id);
+    for (const dep of adj.get(id) || []) {
+      if (hasCycle(dep)) return true;
+    }
+    inStack.delete(id);
+    return false;
+  }
+
+  for (const s of stories) {
+    if (hasCycle(s.id)) {
+      errors.push("Dependency cycle detected");
+      break;
+    }
+  }
+
+  return { valid: errors.length === 0, stories, errors };
+}
+
+// Resolve project path from note frontmatter
+function resolveProjectPath(projectField: string): string | null {
+  if (!projectField || !projectField.trim()) return null;
+  return join(DATA_DIR, projectField.trim());
+}
+
+// Get project PRD
+app.get("/chaos/api/notes/:id/project", async (c) => {
+  const id = c.req.param("id");
+
+  try {
+    const files = await readdir(NOTES_DIR);
+    const filename = files.find((f) => f.startsWith(`${id}-`) && f.endsWith(".md"));
+
+    if (!filename) {
+      return c.json({ error: "Note not found" }, 404);
+    }
+
+    const filepath = join(NOTES_DIR, filename);
+    const content = await readFile(filepath, "utf-8");
+    const { frontmatter } = parseFrontmatter(content);
+
+    const projectPath = resolveProjectPath(frontmatter.project as string);
+    if (!projectPath) {
+      return c.json({ error: "Note has no project linked", hasProject: false }, 400);
+    }
+
+    // Resolve symlinks
+    let resolvedPath = projectPath;
+    try {
+      const stats = await lstat(projectPath);
+      if (stats.isSymbolicLink()) {
+        const target = await readlink(projectPath);
+        resolvedPath = resolve(dirname(projectPath), target);
+      }
+    } catch {
+      return c.json({ error: "Project directory not found", hasProject: true, projectPath }, 404);
+    }
+
+    // Check for prd.json at project root
+    const prdPath = join(resolvedPath, "prd.json");
+    if (!existsSync(prdPath)) {
+      return c.json({
+        hasProject: true,
+        hasPrd: false,
+        projectPath: resolvedPath,
+        error: "No prd.json found at project root",
+      });
+    }
+
+    // Read and validate
+    const prdContent = await readFile(prdPath, "utf-8");
+    let prdData: unknown;
+    try {
+      prdData = JSON.parse(prdContent);
+    } catch {
+      return c.json({
+        hasProject: true,
+        hasPrd: true,
+        valid: false,
+        stories: [],
+        errors: ["prd.json is not valid JSON"],
+      });
+    }
+
+    const result = validatePrd(prdData);
+    return c.json({
+      hasProject: true,
+      hasPrd: true,
+      ...result,
+    });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
+  }
 });
 
 // Serve chaos assets (images) or built web assets

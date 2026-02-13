@@ -187,6 +187,99 @@ cat {baseDir}/data/notes/<id>-<slug>.md
 5. **Web UI exists** at `/chaos/` for human use (agents should use scripts)
 6. **Permalinks** — path to a note: `/chaos/note/<id>`
 
+## Promoting a Note to a Project
+
+Notes can be promoted to full projects with a stories backlog. Projects live at `{dataDir}/projects/<slug>/`.
+
+The `project` frontmatter field links a note to its project directory, using a path relative to the data dir:
+
+```yaml
+---
+id: abc123def456ghi789012
+title: My Project
+project: projects/my-project
+---
+```
+
+This resolves to `{dataDir}/projects/my-project/`.
+
+### Three Workflows
+
+**1. New project from scratch:**
+
+```bash
+mkdir -p {dataDir}/projects/<slug>
+cd {dataDir}/projects/<slug>
+git init
+```
+
+Scaffold a `prd.json` at the project root:
+
+```json
+{
+  "stories": [
+    {
+      "id": 1,
+      "title": "First story",
+      "description": "Description of what to build.",
+      "acceptanceCriteria": ["Criterion 1", "Criterion 2"],
+      "dependsOn": [],
+      "status": "pending"
+    }
+  ]
+}
+```
+
+Then update the note's frontmatter to add `project: projects/<slug>`.
+
+**2. Existing local repo:**
+
+Symlink an existing repo into the projects directory:
+
+```bash
+ln -s /path/to/existing/repo {dataDir}/projects/<slug>
+```
+
+Then update the note's frontmatter to add `project: projects/<slug>`.
+
+**3. Clone from GitHub:**
+
+```bash
+git clone https://github.com/USER/REPO.git {dataDir}/projects/<slug>
+```
+
+Then update the note's frontmatter to add `project: projects/<slug>`.
+
+### PRD Format
+
+The `prd.json` at the project root contains the stories backlog:
+
+```json
+{
+  "stories": [
+    {
+      "id": 1,
+      "title": "Story title",
+      "description": "What to implement.",
+      "acceptanceCriteria": ["Criterion 1"],
+      "dependsOn": [],
+      "status": "pending"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Unique story identifier |
+| `title` | string | Short summary |
+| `description` | string | Detailed description |
+| `acceptanceCriteria` | string[] | Conditions for "done" |
+| `dependsOn` | number[] | IDs of prerequisite stories |
+| `status` | string | `"pending"` or `"done"` |
+
+Array position = priority (earlier stories are implemented first).
+
 ## Web UI URLs
 
 To share note links, you need the base URL where the user accesses the web UI. Never share the note id, because the user can't do anything with it. Always share the permalink.

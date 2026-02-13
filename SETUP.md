@@ -104,6 +104,18 @@ After the first note is created, the agent should ask the user two things:
 
 Once git is set up in `~/.chaos`, all note changes are automatically committed and pushed.
 
+## 7. Symlink the Wile Skill
+
+The chaos repo includes a companion skill for [Wile](https://github.com/dooart/wile) (an autonomous coding agent). To make it available to your agent, symlink it into the skills directory:
+
+```bash
+ln -s <chaos-repo-path>/skills/wile ~/.openclaw/skills/wile
+```
+
+Replace `<chaos-repo-path>` with the actual path to the chaos skill repo (e.g., `~/.openclaw/skills/chaos`).
+
+For other agents, symlink into their respective skills directory.
+
 ## Verify Your Agent Discovers the Skill
 
 Most agents auto-discover skills from their skills directory:

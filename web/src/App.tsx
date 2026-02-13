@@ -18,6 +18,25 @@ interface NoteDetail extends Note {
   content: string
   body: string
   resolvedBody: string
+  project: string | null
+}
+
+interface PrdStory {
+  id: number
+  title: string
+  description: string
+  acceptanceCriteria: string[]
+  dependsOn: number[]
+  status: 'pending' | 'done'
+}
+
+interface ProjectData {
+  hasProject: boolean
+  hasPrd?: boolean
+  valid?: boolean
+  stories?: PrdStory[]
+  errors?: string[]
+  error?: string
 }
 
 interface Toast {
@@ -138,6 +157,11 @@ const api = {
       const data = await res.json()
       throw new Error(data.error || 'Failed to delete note')
     }
+  },
+
+  async getProject(noteId: string): Promise<ProjectData> {
+    const res = await fetch(`/chaos/api/notes/${noteId}/project`)
+    return res.json()
   },
 }
 
@@ -317,6 +341,117 @@ function processInternalLinks(text: string): string {
     .replace(/\[\[([a-z0-9]{21})\]\]/g, '[[$1]]')
 }
 
+// Backlog component
+function Backlog({ noteId }: { noteId: string }) {
+  const [tab, setTab] = useState<'pending' | 'done'>('pending')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['project', noteId],
+    queryFn: () => api.getProject(noteId),
+  })
+
+  if (isLoading) {
+    return <div className="backlog-container"><p className="loading">Loading project...</p></div>
+  }
+
+  if (!data || !data.hasProject) {
+    return (
+      <div className="backlog-container">
+        <div className="backlog-warning">No project linked to this note.</div>
+      </div>
+    )
+  }
+
+  if (!data.hasPrd) {
+    return (
+      <div className="backlog-container">
+        <div className="backlog-warning">No prd.json found at project root.</div>
+      </div>
+    )
+  }
+
+  if (!data.valid) {
+    return (
+      <div className="backlog-container">
+        <div className="backlog-warning">
+          <strong>prd.json is not compatible:</strong>
+          <ul>
+            {(data.errors || []).map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
+  }
+
+  const stories = data.stories || []
+  const doneIds = new Set(stories.filter(s => s.status === 'done').map(s => s.id))
+  const pending = stories.filter(s => s.status === 'pending')
+  const done = stories.filter(s => s.status === 'done')
+  const visible = tab === 'pending' ? pending : done
+
+  return (
+    <div className="backlog-container">
+      <div className="backlog-tabs">
+        <button
+          className={tab === 'pending' ? 'active' : ''}
+          onClick={() => setTab('pending')}
+        >
+          Pending{pending.length > 0 && ` (${pending.length})`}
+        </button>
+        <button
+          className={tab === 'done' ? 'active' : ''}
+          onClick={() => setTab('done')}
+        >
+          Done{done.length > 0 && ` (${done.length})`}
+        </button>
+      </div>
+      {visible.length === 0 ? (
+        <p className="backlog-empty">
+          {tab === 'pending' ? 'No pending stories.' : 'No completed stories.'}
+        </p>
+      ) : (
+        <div className="backlog-stories">
+          {visible.map((story, index) => {
+            const blocked = story.dependsOn.some(dep => !doneIds.has(dep))
+            const blockedBy = story.dependsOn.filter(dep => !doneIds.has(dep))
+            return (
+              <div key={story.id} className={`backlog-story ${blocked ? 'blocked' : ''}`}>
+                <div className="story-header">
+                  <span className="story-position">#{index + 1}</span>
+                  <span className="story-title">{story.title}</span>
+                  <span className={`story-status status-${story.status}`}>{story.status}</span>
+                </div>
+                {blocked && (
+                  <div className="story-blocked">
+                    Blocked by {blockedBy.map(id => `#${stories.findIndex(s => s.id === id) + 1}`).join(', ')}
+                  </div>
+                )}
+                {story.description && (
+                  <p className="story-description">{story.description}</p>
+                )}
+                {story.acceptanceCriteria.length > 0 && (
+                  <ul className="story-criteria">
+                    {story.acceptanceCriteria.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                )}
+                {story.dependsOn.length > 0 && (
+                  <div className="story-deps">
+                    Depends on: {story.dependsOn.map(id => `#${stories.findIndex(s => s.id === id) + 1}`).join(', ')}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Note editor component
 function NoteEditor({
   noteId,
@@ -334,15 +469,7 @@ function NoteEditor({
   const [tagsInput, setTagsInput] = useState<string>('')
   const [isEditingTags, setIsEditingTags] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [viewMode, setViewMode] = useState<'preview' | 'edit'>('preview')
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
+  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog'>('preview')
   // state sync handled below
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -466,11 +593,14 @@ function NoteEditor({
                 })
               }
               disabled={!hasChanges || updateMutation.isPending}
+              title="Save"
             >
-              {updateMutation.isPending ? 'Saving...' : 'Save'}
+              <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 4"/></svg>
+              <span className="btn-label">{updateMutation.isPending ? 'Saving...' : 'Save'}</span>
             </button>
-            <button className="delete-btn" onClick={() => setShowDeleteModal(true)}>
-              Delete
+            <button className="delete-btn" onClick={() => setShowDeleteModal(true)} title="Delete">
+              <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12"/><path d="M5.33 4V2.67a1.33 1.33 0 0 1 1.34-1.34h2.66a1.33 1.33 0 0 1 1.34 1.34V4"/><path d="M12.67 4v9.33a1.33 1.33 0 0 1-1.34 1.34H4.67a1.33 1.33 0 0 1-1.34-1.34V4"/></svg>
+              <span className="btn-label">Delete</span>
             </button>
           </div>
           <div className="editor-actions-right desktop-only">
@@ -495,6 +625,14 @@ function NoteEditor({
           >
             Edit
           </button>
+          {note.project && (
+            <button
+              className={viewMode === 'backlog' ? 'active' : ''}
+              onClick={() => setViewMode('backlog')}
+            >
+              Backlog
+            </button>
+          )}
         </div>
         <div className="mobile-actions">
           <button
@@ -507,17 +645,23 @@ function NoteEditor({
               })
             }
             disabled={!hasChanges || updateMutation.isPending}
+            title="Save"
           >
-            {updateMutation.isPending ? 'Saving...' : 'Save'}
+            <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 4"/></svg>
+            <span className="btn-label">{updateMutation.isPending ? 'Saving...' : 'Save'}</span>
           </button>
-          <button className="delete-btn" onClick={() => setShowDeleteModal(true)}>
-            Delete
+          <button className="delete-btn" onClick={() => setShowDeleteModal(true)} title="Delete">
+            <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12"/><path d="M5.33 4V2.67a1.33 1.33 0 0 1 1.34-1.34h2.66a1.33 1.33 0 0 1 1.34 1.34V4"/><path d="M12.67 4v9.33a1.33 1.33 0 0 1-1.34 1.34H4.67a1.33 1.33 0 0 1-1.34-1.34V4"/></svg>
+            <span className="btn-label">Delete</span>
           </button>
         </div>
       </div>
       
       <div className="editor-body">
-        <div className={`editor-edit-pane ${viewMode === 'preview' ? 'pane-hidden' : ''}`}>
+        {viewMode === 'backlog' && note.project && (
+          <Backlog noteId={noteId} />
+        )}
+        <div className={`editor-edit-pane ${viewMode !== 'edit' ? 'pane-hidden' : ''}`}>
           <div className="meta-bar editor-meta-block">
             <div className="meta-item">
               <label>Status</label>
@@ -574,7 +718,7 @@ function NoteEditor({
           />
         </div>
         <div
-          className={`editor-preview ${viewMode === 'preview' ? 'preview-only' : (isMobile ? 'pane-hidden' : '')}`}
+          className={`editor-preview ${viewMode === 'preview' ? 'preview-only' : 'pane-hidden'}`}
         >
           <Markdown
             remarkPlugins={[remarkGfm]}
