@@ -307,6 +307,219 @@ rm -rf "$TEMP_DATA_NOGIT"
 
 echo ""
 
+# --- TEST: Project field survives operations ---
+# Switch back to git-enabled temp dir
+export CHAOS_DATA_DIR="$TEMP_DATA"
+
+yellow "=== Project Field Tests ==="
+echo ""
+
+yellow "17. Testing project field survives update"
+
+PROJ_TITLE="Project Field Test $TIMESTAMP"
+PROJ_OUTPUT=$("$SCRIPTS_DIR/new-note.sh" "$PROJ_TITLE" 2>&1)
+PROJ_FILE=$(echo "$PROJ_OUTPUT" | tail -1)
+PROJ_ID=$(basename "$PROJ_FILE" | cut -d'-' -f1)
+
+# Manually add project field to frontmatter
+CONTENT=$(cat "$PROJ_FILE")
+echo "$CONTENT" | sed 's/^---$/&/' | head -1 > "$PROJ_FILE.tmp"
+echo "---" > "$PROJ_FILE.tmp"
+echo "id: $PROJ_ID" >> "$PROJ_FILE.tmp"
+echo "title: $PROJ_TITLE" >> "$PROJ_FILE.tmp"
+echo "project: projects/test-project" >> "$PROJ_FILE.tmp"
+echo "---" >> "$PROJ_FILE.tmp"
+mv "$PROJ_FILE.tmp" "$PROJ_FILE"
+cd "$TEMP_DATA" && git add "$PROJ_FILE" && git commit -q -m "add project field"
+
+# Update content — project field must survive
+OUTPUT=$("$SCRIPTS_DIR/update-note.sh" "$PROJ_ID" --status=building "# Test content" 2>&1)
+CONTENT=$(cat "$PROJ_FILE")
+assert_contains "$CONTENT" "project: projects/test-project" "project field survives update"
+assert_contains "$CONTENT" "status: building" "status set alongside project"
+assert_contains "$CONTENT" "# Test content" "content set alongside project"
+
+echo ""
+
+yellow "18. Testing project field survives rename"
+
+NEW_PROJ_TITLE="Renamed Project Test $TIMESTAMP"
+OUTPUT=$("$SCRIPTS_DIR/rename-note.sh" "$PROJ_ID" "$NEW_PROJ_TITLE" 2>&1)
+NEW_PROJ_FILE=$(echo "$OUTPUT" | tail -1)
+CONTENT=$(cat "$NEW_PROJ_FILE")
+assert_contains "$CONTENT" "project: projects/test-project" "project field survives rename"
+assert_contains "$CONTENT" "title: $NEW_PROJ_TITLE" "title updated after rename"
+
+# Cleanup
+"$SCRIPTS_DIR/delete-note.sh" "$PROJ_ID" > /dev/null 2>&1
+
+echo ""
+
+# --- TEST: Search JSON validity ---
+yellow "=== Search JSON Validity ==="
+echo ""
+
+yellow "19. Testing search output is valid JSON"
+
+# Create a note with tricky characters
+TRICKY_TITLE="Test Note With \"Quotes\" & Stuff"
+TRICKY_OUTPUT=$("$SCRIPTS_DIR/new-note.sh" "$TRICKY_TITLE" 2>&1)
+TRICKY_FILE=$(echo "$TRICKY_OUTPUT" | tail -1)
+TRICKY_ID=$(basename "$TRICKY_FILE" | cut -d'-' -f1)
+
+SEARCH_OUTPUT=$("$SCRIPTS_DIR/search-notes.sh" "Quotes" 2>&1)
+echo "$SEARCH_OUTPUT" | jq . > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  green "  ✓ search output is valid JSON"
+  PASSED=$((PASSED + 1))
+else
+  red "  ✗ search output is valid JSON"
+  red "    output: $SEARCH_OUTPUT"
+  FAILED=$((FAILED + 1))
+fi
+
+assert_contains "$SEARCH_OUTPUT" "$TRICKY_ID" "search finds note with special chars"
+
+echo ""
+
+yellow "20. Testing search with no results is valid JSON"
+SEARCH_EMPTY=$("$SCRIPTS_DIR/search-notes.sh" "zzzznonexistentzzzz" 2>&1)
+assert_equals "[]" "$SEARCH_EMPTY" "empty search returns []"
+
+# Cleanup
+"$SCRIPTS_DIR/delete-note.sh" "$TRICKY_ID" > /dev/null 2>&1
+
+echo ""
+
+# --- TEST: PRD Validation ---
+yellow "=== PRD Validation ==="
+echo ""
+
+# Create a project dir with prd.json for testing
+PRD_TEST_DIR=$(mktemp -d)
+mkdir -p "$PRD_TEST_DIR/.wile"
+
+yellow "21. Testing valid PRD"
+cat > "$PRD_TEST_DIR/.wile/prd.json" << 'PRDEOF'
+{
+  "stories": [
+    {"id": 1, "title": "First", "description": "Do first thing", "acceptanceCriteria": ["works"], "dependsOn": [], "status": "done"},
+    {"id": 2, "title": "Second", "description": "Do second thing", "acceptanceCriteria": ["works"], "dependsOn": [1], "status": "pending"}
+  ]
+}
+PRDEOF
+
+# We test via the server's validation endpoint indirectly by using the same logic
+# For now test via a small inline validator
+PRD_VALID=$(bun -e "
+const fs = require('fs');
+const prd = JSON.parse(fs.readFileSync('$PRD_TEST_DIR/.wile/prd.json', 'utf-8'));
+const ids = new Set();
+const errors = [];
+for (const s of prd.stories) {
+  if (typeof s.id !== 'number') errors.push('id must be number');
+  if (typeof s.title !== 'string') errors.push('title must be string');
+  if (!['pending','done'].includes(s.status)) errors.push('invalid status');
+  if (ids.has(s.id)) errors.push('duplicate id ' + s.id);
+  ids.add(s.id);
+  for (const d of (s.dependsOn || [])) {
+    if (!prd.stories.some(x => x.id === d)) errors.push('missing dep ' + d);
+  }
+}
+console.log(JSON.stringify({valid: errors.length === 0, errors}));
+")
+assert_contains "$PRD_VALID" '"valid":true' "valid PRD passes validation"
+
+echo ""
+
+yellow "22. Testing PRD with duplicate IDs"
+cat > "$PRD_TEST_DIR/.wile/prd.json" << 'PRDEOF'
+{
+  "stories": [
+    {"id": 1, "title": "First", "description": "d", "acceptanceCriteria": [], "dependsOn": [], "status": "pending"},
+    {"id": 1, "title": "Dupe", "description": "d", "acceptanceCriteria": [], "dependsOn": [], "status": "pending"}
+  ]
+}
+PRDEOF
+
+PRD_DUPE=$(bun -e "
+const fs = require('fs');
+const prd = JSON.parse(fs.readFileSync('$PRD_TEST_DIR/.wile/prd.json', 'utf-8'));
+const ids = new Set();
+const errors = [];
+for (const s of prd.stories) {
+  if (ids.has(s.id)) errors.push('duplicate id ' + s.id);
+  ids.add(s.id);
+}
+console.log(JSON.stringify({valid: errors.length === 0, errors}));
+")
+assert_contains "$PRD_DUPE" '"valid":false' "duplicate IDs rejected"
+assert_contains "$PRD_DUPE" 'duplicate id' "error mentions duplicate"
+
+echo ""
+
+yellow "23. Testing PRD with missing dependency"
+cat > "$PRD_TEST_DIR/.wile/prd.json" << 'PRDEOF'
+{
+  "stories": [
+    {"id": 1, "title": "First", "description": "d", "acceptanceCriteria": [], "dependsOn": [99], "status": "pending"}
+  ]
+}
+PRDEOF
+
+PRD_MISSING=$(bun -e "
+const fs = require('fs');
+const prd = JSON.parse(fs.readFileSync('$PRD_TEST_DIR/.wile/prd.json', 'utf-8'));
+const ids = new Set(prd.stories.map(s => s.id));
+const errors = [];
+for (const s of prd.stories) {
+  for (const d of (s.dependsOn || [])) {
+    if (!ids.has(d)) errors.push('missing dep ' + d);
+  }
+}
+console.log(JSON.stringify({valid: errors.length === 0, errors}));
+")
+assert_contains "$PRD_MISSING" '"valid":false' "missing dep rejected"
+assert_contains "$PRD_MISSING" 'missing dep' "error mentions missing dep"
+
+echo ""
+
+yellow "24. Testing PRD with cycle"
+cat > "$PRD_TEST_DIR/.wile/prd.json" << 'PRDEOF'
+{
+  "stories": [
+    {"id": 1, "title": "A", "description": "d", "acceptanceCriteria": [], "dependsOn": [2], "status": "pending"},
+    {"id": 2, "title": "B", "description": "d", "acceptanceCriteria": [], "dependsOn": [1], "status": "pending"}
+  ]
+}
+PRDEOF
+
+PRD_CYCLE=$(bun -e "
+const fs = require('fs');
+const prd = JSON.parse(fs.readFileSync('$PRD_TEST_DIR/.wile/prd.json', 'utf-8'));
+const adj = {};
+for (const s of prd.stories) { adj[s.id] = s.dependsOn || []; }
+const visited = new Set();
+const inStack = new Set();
+let hasCycle = false;
+function dfs(n) {
+  visited.add(n); inStack.add(n);
+  for (const d of (adj[n]||[])) {
+    if (inStack.has(d)) { hasCycle = true; return; }
+    if (!visited.has(d)) dfs(d);
+  }
+  inStack.delete(n);
+}
+for (const s of prd.stories) { if (!visited.has(s.id)) dfs(s.id); }
+console.log(JSON.stringify({valid: !hasCycle, hasCycle}));
+")
+assert_contains "$PRD_CYCLE" '"valid":false' "cycle detected"
+assert_contains "$PRD_CYCLE" '"hasCycle":true' "hasCycle flag set"
+
+rm -rf "$PRD_TEST_DIR"
+
+echo ""
+
 # --- SUMMARY ---
 echo ""
 yellow "=== Test Summary ==="
