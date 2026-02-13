@@ -1,0 +1,9 @@
+{
+  "name": "chaos-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "sharp": "^0.33.5"
+  }
+}

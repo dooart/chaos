@@ -3,6 +3,7 @@ data
 
 # Dependencies
 web/node_modules/
+scripts/node_modules/
 
 # Build
 web/dist/

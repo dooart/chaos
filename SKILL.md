@@ -74,14 +74,14 @@ Markdown body...
 - Link with custom text: `[[id|my custom text]]`
 - Broken links render as raw `[[id]]`
 
-## Scripts
+## CLI
 
-All scripts are in `{baseDir}/scripts/`. If the data directory has a `.git` folder, scripts will auto-commit and push changes.
+All operations use the TypeScript CLI at `{baseDir}/scripts/chaos.ts`. Run with `bun`. If the data directory has a `.git` folder, operations auto-commit and push changes.
 
 ### Create a New Note
 
 ```bash
-{baseDir}/scripts/new-note.sh "Note Title"
+bun {baseDir}/scripts/chaos.ts new "Note Title"
 ```
 
 Creates a new note with generated ID, commits it (if git enabled), and prints the file path.
@@ -97,22 +97,22 @@ cat > /tmp/note.md <<'EOF'
 
 Real newlines here.
 EOF
-{baseDir}/scripts/update-note.sh "<id>" "$(cat /tmp/note.md)"
+bun {baseDir}/scripts/chaos.ts update "<id>" "$(cat /tmp/note.md)"
 
 # Update status only (keeps existing content)
-{baseDir}/scripts/update-note.sh "<id>" --status=building
+bun {baseDir}/scripts/chaos.ts update "<id>" --status=building
 
 # Update tags only
-{baseDir}/scripts/update-note.sh "<id>" --tags=tag1,tag2
+bun {baseDir}/scripts/chaos.ts update "<id>" --tags=tag1,tag2
 
 # Update everything
-{baseDir}/scripts/update-note.sh "<id>" --status=done --tags=project,shipped "Final content here"
+bun {baseDir}/scripts/chaos.ts update "<id>" --status=done --tags=project,shipped "Final content here"
 
 # Clear status (remove from frontmatter)
-{baseDir}/scripts/update-note.sh "<id>" --status=clear
+bun {baseDir}/scripts/chaos.ts update "<id>" --status=clear
 
 # Clear tags
-{baseDir}/scripts/update-note.sh "<id>" --tags=
+bun {baseDir}/scripts/chaos.ts update "<id>" --tags=
 ```
 
 Options:
@@ -123,7 +123,7 @@ Options:
 ### Rename a Note
 
 ```bash
-{baseDir}/scripts/rename-note.sh "<id>" "New Title"
+bun {baseDir}/scripts/chaos.ts rename "<id>" "New Title"
 ```
 
 Updates the title in frontmatter and renames the file. The ID stays the same.
@@ -131,13 +131,13 @@ Updates the title in frontmatter and renames the file. The ID stays the same.
 ### Delete a Note
 
 ```bash
-{baseDir}/scripts/delete-note.sh "<id>"
+bun {baseDir}/scripts/chaos.ts delete "<id>"
 ```
 
 ### Add an Image to a Note
 
 ```bash
-{baseDir}/scripts/add-image-to-note.sh "<id>" "/path/to/image.jpg" "description of the image"
+bun {baseDir}/scripts/chaos.ts add-image "<id>" "/path/to/image.jpg" "description of the image"
 ```
 
 - Converts to webp (quality 95), auto-orients, strips EXIF, resizes to max 2048px
@@ -154,7 +154,7 @@ ls -la {baseDir}/data/notes/
 ### Search Notes
 
 ```bash
-{baseDir}/scripts/search-notes.sh "search term"
+bun {baseDir}/scripts/chaos.ts search "search term"
 ```
 
 Returns JSON array of matching notes with id, title, status, tags, filename, and path.
