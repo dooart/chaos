@@ -5,7 +5,7 @@ description: Run Wile autonomous coding agent on chaos projects. Use when the us
 
 # Wile — Autonomous Coding Agent
 
-Wile is an autonomous AI coding agent that reads a `prd.json` (stories backlog) and implements stories one by one using a coding agent CLI (Claude Code, Codex, Gemini CLI, or OpenCode). It runs in Docker.
+Wile is an autonomous AI coding agent that reads `.wile/prd.json` (stories backlog) and implements stories one by one using a coding agent CLI (Claude Code, Codex, Gemini CLI, or OpenCode). It runs in Docker.
 
 Source code: `~/opensrc/repos/github.com/dooart/wile`
 
@@ -27,7 +27,7 @@ This resolves to `~/.chaos/projects/little-errant/`.
 
 ## PRD Format
 
-Each project has a `prd.json` at its root. This is the stories backlog that Wile processes.
+Each project has a `.wile/prd.json`. This is the stories backlog that Wile processes.
 
 ```json
 {

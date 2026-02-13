@@ -496,14 +496,14 @@ app.get("/chaos/api/notes/:id/project", async (c) => {
       return c.json({ error: "Project directory not found", hasProject: true, projectPath }, 404);
     }
 
-    // Check for prd.json at project root
-    const prdPath = join(resolvedPath, "prd.json");
+    // Check for .wile/prd.json
+    const prdPath = join(resolvedPath, ".wile", "prd.json");
     if (!existsSync(prdPath)) {
       return c.json({
         hasProject: true,
         hasPrd: false,
         projectPath: resolvedPath,
-        error: "No prd.json found at project root",
+        error: "No .wile/prd.json found in project",
       });
     }
 

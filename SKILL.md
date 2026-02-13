@@ -213,7 +213,7 @@ cd {dataDir}/projects/<slug>
 git init
 ```
 
-Scaffold a `prd.json` at the project root:
+Scaffold a `.wile/prd.json` in the project:
 
 ```json
 {
@@ -252,7 +252,7 @@ Then update the note's frontmatter to add `project: projects/<slug>`.
 
 ### PRD Format
 
-The `prd.json` at the project root contains the stories backlog:
+The `.wile/prd.json` contains the stories backlog:
 
 ```json
 {
