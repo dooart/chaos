@@ -70,6 +70,7 @@ CURRENT_ID=$(echo "$FM_JSON" | jq -r '.id // empty')
 CURRENT_TITLE=$(echo "$FM_JSON" | jq -r '.title // empty')
 CURRENT_STATUS=$(echo "$FM_JSON" | jq -r '.status // empty')
 CURRENT_TAGS=$(echo "$FM_JSON" | jq -r 'if .tags then "[" + (.tags | join(", ")) + "]" else "" end')
+CURRENT_PROJECT=$(echo "$FM_JSON" | jq -r '.project // empty')
 CURRENT_BODY=$(echo "$FM_JSON" | jq -r '.body // empty')
 
 # Determine final values
@@ -110,6 +111,7 @@ fi
   echo "title: $CURRENT_TITLE"
   [ -n "$FINAL_STATUS" ] && echo "status: $FINAL_STATUS"
   [ -n "$FINAL_TAGS" ] && echo "tags: $FINAL_TAGS"
+  [ -n "$CURRENT_PROJECT" ] && echo "project: $CURRENT_PROJECT"
   echo "---"
   [ -n "$FINAL_BODY" ] && echo "" && echo "$FINAL_BODY"
 } > "$FILE"

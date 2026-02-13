@@ -30,6 +30,7 @@ FM_JSON=$(bun "$SCRIPT_DIR/parse-frontmatter.ts" "$OLD_FILE" --json)
 CURRENT_ID=$(echo "$FM_JSON" | jq -r '.id // empty')
 CURRENT_STATUS=$(echo "$FM_JSON" | jq -r '.status // empty')
 CURRENT_TAGS=$(echo "$FM_JSON" | jq -r 'if .tags then "[" + (.tags | join(", ")) + "]" else "" end')
+CURRENT_PROJECT=$(echo "$FM_JSON" | jq -r '.project // empty')
 CURRENT_BODY=$(echo "$FM_JSON" | jq -r '.body // empty')
 
 # Generate new slug from title
@@ -44,6 +45,7 @@ NEW_FILEPATH="$NOTES_DIR/$NEW_FILENAME"
   echo "title: $NEW_TITLE"
   [ -n "$CURRENT_STATUS" ] && echo "status: $CURRENT_STATUS"
   [ -n "$CURRENT_TAGS" ] && echo "tags: $CURRENT_TAGS"
+  [ -n "$CURRENT_PROJECT" ] && echo "project: $CURRENT_PROJECT"
   echo "---"
   [ -n "$CURRENT_BODY" ] && echo "" && echo "$CURRENT_BODY"
 } > "$OLD_FILE"
