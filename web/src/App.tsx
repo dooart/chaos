@@ -343,7 +343,7 @@ function processInternalLinks(text: string): string {
 
 // Backlog component
 function Backlog({ noteId }: { noteId: string }) {
-  const [tab, setTab] = useState<'pending' | 'done' | 'live'>('pending')
+  const [tab, setTab] = useState<'pending' | 'done' | 'logs' | 'progress'>('pending')
 
   const { data, isLoading } = useQuery({
     queryKey: ['project', noteId],
@@ -389,7 +389,7 @@ function Backlog({ noteId }: { noteId: string }) {
   const doneIds = new Set(stories.filter(s => s.status === 'done').map(s => s.id))
   const pending = stories.filter(s => s.status === 'pending')
   const done = stories.filter(s => s.status === 'done')
-  const visible = tab === 'pending' ? pending : tab === 'done' ? done : []
+  const visible = tab === 'pending' ? pending : tab === 'done' ? done : []  
 
   return (
     <div className="backlog-container">
@@ -407,14 +407,22 @@ function Backlog({ noteId }: { noteId: string }) {
           Done{done.length > 0 && ` (${done.length})`}
         </button>
         <button
-          className={tab === 'live' ? 'active' : ''}
-          onClick={() => setTab('live')}
+          className={tab === 'logs' ? 'active' : ''}
+          onClick={() => setTab('logs')}
         >
-          Live
+          Logs
+        </button>
+        <button
+          className={tab === 'progress' ? 'active' : ''}
+          onClick={() => setTab('progress')}
+        >
+          Progress
         </button>
       </div>
-      {tab === 'live' ? (
-        <LiveView noteId={noteId} />
+      {tab === 'logs' ? (
+        <LogsView noteId={noteId} />
+      ) : tab === 'progress' ? (
+        <ProgressView noteId={noteId} />
       ) : visible.length === 0 ? (
         <p className="backlog-empty">
           {tab === 'pending' ? 'No pending stories.' : 'No completed stories.'}
@@ -461,34 +469,25 @@ function Backlog({ noteId }: { noteId: string }) {
 }
 
 // Live view component — streams logs and progress from wile
-function LiveView({ noteId }: { noteId: string }) {
-  const [progress, setProgress] = useState('')
+// Logs view — streams log files from wile
+function LogsView({ noteId }: { noteId: string }) {
   const [logContent, setLogContent] = useState('')
   const [logFiles, setLogFiles] = useState<string[]>([])
   const [currentLog, setCurrentLog] = useState('')
   const [selectedLog, setSelectedLog] = useState('')
   const [autoScroll, setAutoScroll] = useState(true)
   const logRef = useRef<HTMLPreElement>(null)
-  const eventSourceRef = useRef<EventSource | null>(null)
 
-  // Auto-scroll effect
   useEffect(() => {
     if (autoScroll && logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight
     }
   }, [logContent, autoScroll])
 
-  // SSE connection
   useEffect(() => {
     const logParam = selectedLog ? `?log=${encodeURIComponent(selectedLog)}` : ''
     const url = `/chaos/api/notes/${noteId}/project/stream${logParam}`
     const es = new EventSource(url)
-    eventSourceRef.current = es
-
-    es.addEventListener('progress', (e) => {
-      const data = JSON.parse(e.data)
-      setProgress(data.content)
-    })
 
     es.addEventListener('log', (e) => {
       const data = JSON.parse(e.data)
@@ -506,33 +505,14 @@ function LiveView({ noteId }: { noteId: string }) {
       if (data.current) setCurrentLog(data.current)
     })
 
-    es.addEventListener('prd', () => {
-      // PRD changed
-    })
-
-    es.onerror = () => {
-      // Connection lost
-    }
-
-    return () => {
-      es.close()
-      eventSourceRef.current = null
-    }
+    return () => es.close()
   }, [noteId, selectedLog])
 
-  // Handle scroll — pause auto-scroll when user scrolls up
   const handleLogScroll = useCallback(() => {
     if (!logRef.current) return
     const { scrollTop, scrollHeight, clientHeight } = logRef.current
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
-    setAutoScroll(isAtBottom)
+    setAutoScroll(scrollHeight - scrollTop - clientHeight < 50)
   }, [])
-
-  // Don't clear content on log switch — just swap selection, SSE reconnects and sends initial
-  const handleLogSelect = (file: string) => {
-    setSelectedLog(file)
-    setCurrentLog(file)
-  }
 
   return (
     <div className="live-container">
@@ -540,7 +520,7 @@ function LiveView({ noteId }: { noteId: string }) {
         <select
           className="live-log-select"
           value={selectedLog || currentLog || ''}
-          onChange={(e) => handleLogSelect(e.target.value)}
+          onChange={(e) => { setSelectedLog(e.target.value); setCurrentLog(e.target.value) }}
           disabled={logFiles.length === 0}
         >
           {logFiles.length === 0 ? (
@@ -554,18 +534,6 @@ function LiveView({ noteId }: { noteId: string }) {
           )}
         </select>
       </div>
-
-      <details className="live-progress" open>
-        <summary>Progress</summary>
-        <div className="live-progress-content editor-preview">
-          {progress ? (
-            <Markdown remarkPlugins={[remarkGfm]}>{progress}</Markdown>
-          ) : (
-            <p className="live-empty-text">No progress yet</p>
-          )}
-        </div>
-      </details>
-
       <div className="live-log-wrapper">
         <div className="live-log-toolbar">
           <span className="live-log-filename">{currentLog || 'No logs'}</span>
@@ -581,14 +549,37 @@ function LiveView({ noteId }: { noteId: string }) {
             </button>
           )}
         </div>
-        <pre
-          ref={logRef}
-          className="live-log"
-          onScroll={handleLogScroll}
-        >
+        <pre ref={logRef} className="live-log" onScroll={handleLogScroll}>
           {logContent || <span className="live-log-empty">No log output yet</span>}
         </pre>
       </div>
+    </div>
+  )
+}
+
+// Progress view — streams progress.txt from wile
+function ProgressView({ noteId }: { noteId: string }) {
+  const [progress, setProgress] = useState('')
+
+  useEffect(() => {
+    const url = `/chaos/api/notes/${noteId}/project/stream`
+    const es = new EventSource(url)
+
+    es.addEventListener('progress', (e) => {
+      const data = JSON.parse(e.data)
+      setProgress(data.content)
+    })
+
+    return () => es.close()
+  }, [noteId])
+
+  return (
+    <div className="progress-container editor-preview">
+      {progress ? (
+        <Markdown remarkPlugins={[remarkGfm]}>{progress}</Markdown>
+      ) : (
+        <p className="live-empty-text">No progress yet</p>
+      )}
     </div>
   )
 }

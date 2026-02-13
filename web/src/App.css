@@ -1062,33 +1062,11 @@
   cursor: pointer;
 }
 
-.live-progress {
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  max-height: 30%;
-  min-height: 60px;
+.progress-container {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-}
-
-.live-progress summary {
-  padding: var(--space-md) var(--space-lg) var(--space-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.live-progress-content {
-  padding: 0 var(--space-lg) var(--space-md);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.live-progress-content p {
-  margin: 0 0 var(--space-sm);
+  padding: var(--space-lg);
 }
 
 .live-log-wrapper {
@@ -1160,12 +1138,8 @@
     width: 100%;
   }
 
-  .live-progress summary {
-    padding: var(--space-xs) var(--space-md);
-  }
-
-  .live-progress-content {
-    padding: 0 var(--space-md) var(--space-sm);
+  .progress-container {
+    padding: var(--space-md);
   }
 
   .live-log-toolbar {
