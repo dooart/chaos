@@ -348,6 +348,31 @@ function resolveProjectPath(projectField: string): string | null {
   return join(DATA_DIR, projectField.trim());
 }
 
+// Helper: resolve note ID to its project directory on disk
+async function getProjectDir(noteId: string): Promise<{ path: string } | { error: string; status: number }> {
+  const files = await readdir(NOTES_DIR);
+  const filename = files.find((f) => f.startsWith(`${noteId}-`) && f.endsWith(".md"));
+  if (!filename) return { error: "Note not found", status: 404 };
+
+  const filepath = join(NOTES_DIR, filename);
+  const content = await readFile(filepath, "utf-8");
+  const { frontmatter } = parseFrontmatter(content);
+
+  const projectPath = resolveProjectPath(frontmatter.project as string);
+  if (!projectPath) return { error: "Note has no project linked", status: 400 };
+
+  try {
+    const stats = await lstat(projectPath);
+    if (stats.isSymbolicLink()) {
+      const target = await readlink(projectPath);
+      return { path: resolve(dirname(projectPath), target) };
+    }
+    return { path: projectPath };
+  } catch {
+    return { error: "Project directory not found", status: 404 };
+  }
+}
+
 // Get project PRD
 app.get("/chaos/api/notes/:id/project", async (c) => {
   const id = c.req.param("id");
@@ -416,6 +441,185 @@ app.get("/chaos/api/notes/:id/project", async (c) => {
   } catch (e) {
     return c.json({ error: String(e) }, 500);
   }
+});
+
+// List available log files for a project
+app.get("/chaos/api/notes/:id/project/logs", async (c) => {
+  const result = await getProjectDir(c.req.param("id"));
+  if ("error" in result) return c.json({ error: result.error }, result.status as any);
+
+  const logsDir = join(result.path, ".wile", "logs");
+  try {
+    const files = await readdir(logsDir);
+    const logs = files
+      .filter((f) => f.endsWith(".log"))
+      .sort()
+      .reverse() // newest first
+      .map((f) => ({ name: f, path: join(logsDir, f) }));
+    return c.json({ logs: logs.map((l) => l.name) });
+  } catch {
+    return c.json({ logs: [] });
+  }
+});
+
+// SSE stream for live project updates (progress, logs, prd changes)
+app.get("/chaos/api/notes/:id/project/stream", async (c) => {
+  const result = await getProjectDir(c.req.param("id"));
+  if ("error" in result) return c.json({ error: result.error }, result.status as any);
+
+  const projectDir = result.path;
+  const wileDir = join(projectDir, ".wile");
+  const logFile = c.req.query("log"); // optional: specific log file
+
+  // Track file states for diffing
+  let lastProgressMtime = 0;
+  let lastProgressContent = "";
+  let lastLogMtime = 0;
+  let lastLogSize = 0;
+  let lastPrdMtime = 0;
+  let currentLogFile = logFile || "";
+
+  function getLogPath(): string {
+    if (currentLogFile) return join(wileDir, "logs", currentLogFile);
+    // Find most recent log file
+    try {
+      const logsDir = join(wileDir, "logs");
+      const files = require("fs").readdirSync(logsDir)
+        .filter((f: string) => f.endsWith(".log"))
+        .sort()
+        .reverse();
+      if (files.length > 0) {
+        currentLogFile = files[0];
+        return join(logsDir, files[0]);
+      }
+    } catch {}
+    return "";
+  }
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      function send(event: string, data: unknown) {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      }
+
+      const interval = setInterval(async () => {
+        try {
+          // Check progress.txt
+          const progressPath = join(wileDir, "progress.txt");
+          try {
+            const s = require("fs").statSync(progressPath);
+            if (s.mtimeMs > lastProgressMtime) {
+              lastProgressMtime = s.mtimeMs;
+              const content = require("fs").readFileSync(progressPath, "utf-8");
+              if (content !== lastProgressContent) {
+                lastProgressContent = content;
+                send("progress", { content });
+              }
+            }
+          } catch {}
+
+          // Check log file
+          const logPath = getLogPath();
+          if (logPath) {
+            try {
+              const s = require("fs").statSync(logPath);
+              if (s.mtimeMs > lastLogMtime || s.size > lastLogSize) {
+                lastLogMtime = s.mtimeMs;
+                // Read only new bytes
+                const fd = require("fs").openSync(logPath, "r");
+                const newSize = s.size;
+                const readFrom = Math.max(0, lastLogSize);
+                const buf = Buffer.alloc(newSize - readFrom);
+                require("fs").readSync(fd, buf, 0, buf.length, readFrom);
+                require("fs").closeSync(fd);
+                lastLogSize = newSize;
+                const chunk = buf.toString("utf-8");
+                if (chunk) {
+                  send("log", { chunk, file: currentLogFile });
+                }
+              }
+            } catch {}
+          }
+
+          // Check prd.json
+          const prdPath = join(wileDir, "prd.json");
+          try {
+            const s = require("fs").statSync(prdPath);
+            if (s.mtimeMs > lastPrdMtime) {
+              lastPrdMtime = s.mtimeMs;
+              const content = require("fs").readFileSync(prdPath, "utf-8");
+              const prdData = JSON.parse(content);
+              const validated = validatePrd(prdData);
+              send("prd", validated);
+            }
+          } catch {}
+        } catch {
+          // Stream error, will be caught by close
+        }
+      }, 1000);
+
+      // Send initial state
+      (async () => {
+        // Initial progress
+        try {
+          const progressPath = join(wileDir, "progress.txt");
+          const content = require("fs").readFileSync(progressPath, "utf-8");
+          const s = require("fs").statSync(progressPath);
+          lastProgressMtime = s.mtimeMs;
+          lastProgressContent = content;
+          send("progress", { content });
+        } catch {}
+
+        // Initial log
+        const logPath = getLogPath();
+        if (logPath) {
+          try {
+            const content = require("fs").readFileSync(logPath, "utf-8");
+            const s = require("fs").statSync(logPath);
+            lastLogMtime = s.mtimeMs;
+            lastLogSize = s.size;
+            send("log", { chunk: content, file: currentLogFile, initial: true });
+          } catch {}
+        }
+
+        // Initial log file list
+        try {
+          const logsDir = join(wileDir, "logs");
+          const files = require("fs").readdirSync(logsDir)
+            .filter((f: string) => f.endsWith(".log"))
+            .sort()
+            .reverse();
+          send("logFiles", { files, current: currentLogFile });
+        } catch {}
+
+        // Initial PRD
+        try {
+          const prdPath = join(wileDir, "prd.json");
+          const content = require("fs").readFileSync(prdPath, "utf-8");
+          const s = require("fs").statSync(prdPath);
+          lastPrdMtime = s.mtimeMs;
+          const prdData = JSON.parse(content);
+          const validated = validatePrd(prdData);
+          send("prd", validated);
+        } catch {}
+      })();
+
+      // Cleanup on close
+      c.req.raw.signal.addEventListener("abort", () => {
+        clearInterval(interval);
+        try { controller.close(); } catch {}
+      });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 });
 
 // Serve chaos assets (images) or built web assets
