@@ -467,11 +467,11 @@ function LiveView({ noteId }: { noteId: string }) {
   const [logFiles, setLogFiles] = useState<string[]>([])
   const [currentLog, setCurrentLog] = useState('')
   const [selectedLog, setSelectedLog] = useState('')
-  const [isActive, setIsActive] = useState(false)
+  const [lastActivity, setLastActivity] = useState<number | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
+  const [connected, setConnected] = useState(false)
   const logRef = useRef<HTMLPreElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
-  const lastActivityRef = useRef(Date.now())
 
   // Auto-scroll effect
   useEffect(() => {
@@ -480,16 +480,6 @@ function LiveView({ noteId }: { noteId: string }) {
     }
   }, [logContent, autoScroll])
 
-  // Activity timeout — mark inactive after 30s of no updates
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (Date.now() - lastActivityRef.current > 30000) {
-        setIsActive(false)
-      }
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [])
-
   // SSE connection
   useEffect(() => {
     const logParam = selectedLog ? `?log=${encodeURIComponent(selectedLog)}` : ''
@@ -497,39 +487,42 @@ function LiveView({ noteId }: { noteId: string }) {
     const es = new EventSource(url)
     eventSourceRef.current = es
 
+    let initialProgressReceived = false
     es.addEventListener('progress', (e) => {
       const data = JSON.parse(e.data)
+      const isFirst = !initialProgressReceived
+      initialProgressReceived = true
       setProgress(data.content)
-      lastActivityRef.current = Date.now()
-      setIsActive(true)
+      // Only count as activity if it's an update, not the initial load
+      if (!isFirst) setLastActivity(Date.now())
     })
 
     es.addEventListener('log', (e) => {
       const data = JSON.parse(e.data)
       if (data.initial) {
         setLogContent(data.chunk)
+        // Use the file's actual mtime for initial activity timestamp
+        if (data.lastModified) setLastActivity(data.lastModified)
       } else {
         setLogContent((prev) => prev + data.chunk)
+        setLastActivity(Date.now())
       }
       if (data.file) setCurrentLog(data.file)
-      lastActivityRef.current = Date.now()
-      setIsActive(true)
     })
 
     es.addEventListener('logFiles', (e) => {
       const data = JSON.parse(e.data)
       setLogFiles(data.files)
       if (data.current) setCurrentLog(data.current)
+      setConnected(true)
     })
 
     es.addEventListener('prd', () => {
-      // PRD changed — could trigger a refetch of backlog data
-      lastActivityRef.current = Date.now()
-      setIsActive(true)
+      setLastActivity(Date.now())
     })
 
     es.onerror = () => {
-      setIsActive(false)
+      setConnected(false)
     }
 
     return () => {
@@ -546,42 +539,67 @@ function LiveView({ noteId }: { noteId: string }) {
     setAutoScroll(isAtBottom)
   }, [])
 
+  // Don't clear content on log switch — just swap selection, SSE reconnects and sends initial
   const handleLogSelect = (file: string) => {
     setSelectedLog(file)
-    setLogContent('')
     setCurrentLog(file)
   }
+
+  // Format last activity as relative time
+  const activityLabel = (() => {
+    if (!connected) return 'Connecting...'
+    if (!lastActivity) return 'No activity'
+    const ago = Math.floor((Date.now() - lastActivity) / 1000)
+    if (ago < 5) return 'Active now'
+    if (ago < 60) return `${ago}s ago`
+    if (ago < 3600) return `${Math.floor(ago / 60)}m ago`
+    return `${Math.floor(ago / 3600)}h ago`
+  })()
+
+  // Re-render the label periodically
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 5000)
+    return () => clearInterval(t)
+  }, [])
+
+  const isRecent = lastActivity != null && Date.now() - lastActivity < 30000
 
   return (
     <div className="live-container">
       <div className="live-header">
         <div className="live-status">
-          <span className={`live-dot ${isActive ? 'active' : 'idle'}`} />
-          <span className="live-label">{isActive ? 'Running' : 'Idle'}</span>
+          <span className={`live-dot ${isRecent ? 'active' : 'idle'}`} />
+          <span className="live-label">{activityLabel}</span>
         </div>
-        {logFiles.length > 0 && (
-          <select
-            className="live-log-select"
-            value={selectedLog || currentLog}
-            onChange={(e) => handleLogSelect(e.target.value)}
-          >
-            {logFiles.map((f) => (
+        <select
+          className="live-log-select"
+          value={selectedLog || currentLog || ''}
+          onChange={(e) => handleLogSelect(e.target.value)}
+          disabled={logFiles.length === 0}
+        >
+          {logFiles.length === 0 ? (
+            <option value="">No logs</option>
+          ) : (
+            logFiles.map((f) => (
               <option key={f} value={f}>
                 {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
               </option>
-            ))}
-          </select>
-        )}
+            ))
+          )}
+        </select>
       </div>
 
-      {progress && (
-        <details className="live-progress" open>
-          <summary>Progress</summary>
-          <div className="live-progress-content">
+      <details className="live-progress" open>
+        <summary>Progress</summary>
+        <div className="live-progress-content">
+          {progress ? (
             <Markdown remarkPlugins={[remarkGfm]}>{progress}</Markdown>
-          </div>
-        </details>
-      )}
+          ) : (
+            <p className="live-empty-text">No progress yet</p>
+          )}
+        </div>
+      </details>
 
       <div className="live-log-wrapper">
         <div className="live-log-toolbar">
