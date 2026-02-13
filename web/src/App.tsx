@@ -568,26 +568,28 @@ function LiveView({ noteId }: { noteId: string }) {
   return (
     <div className="live-container">
       <div className="live-header">
-        <div className="live-status">
-          <span className={`live-dot ${isRecent ? 'active' : 'idle'}`} />
-          <span className="live-label">{activityLabel}</span>
+        <div className="live-header-inner">
+          <div className="live-status">
+            <span className={`live-dot ${isRecent ? 'active' : 'idle'}`} />
+            <span className="live-label">{activityLabel}</span>
+          </div>
+          <select
+            className="live-log-select"
+            value={selectedLog || currentLog || ''}
+            onChange={(e) => handleLogSelect(e.target.value)}
+            disabled={logFiles.length === 0}
+          >
+            {logFiles.length === 0 ? (
+              <option value="">No logs</option>
+            ) : (
+              logFiles.map((f) => (
+                <option key={f} value={f}>
+                  {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
+                </option>
+              ))
+            )}
+          </select>
         </div>
-        <select
-          className="live-log-select"
-          value={selectedLog || currentLog || ''}
-          onChange={(e) => handleLogSelect(e.target.value)}
-          disabled={logFiles.length === 0}
-        >
-          {logFiles.length === 0 ? (
-            <option value="">No logs</option>
-          ) : (
-            logFiles.map((f) => (
-              <option key={f} value={f}>
-                {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
-              </option>
-            ))
-          )}
-        </select>
       </div>
 
       <details className="live-progress" open>

@@ -873,6 +873,7 @@
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
+  width: 100%;
 }
 
 .backlog-warning {
@@ -1028,7 +1029,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  margin: -1.5rem;
+  margin: 0 -1.5rem -1.5rem;
   width: calc(100% + 3rem);
 }
 
@@ -1040,6 +1041,14 @@
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
   flex-shrink: 0;
+}
+
+.live-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 400px;
+  width: 100%;
 }
 
 .live-status {
