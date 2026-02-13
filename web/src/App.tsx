@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
@@ -452,6 +452,156 @@ function Backlog({ noteId }: { noteId: string }) {
   )
 }
 
+// Live view component — streams logs and progress from wile
+function LiveView({ noteId }: { noteId: string }) {
+  const [progress, setProgress] = useState('')
+  const [logContent, setLogContent] = useState('')
+  const [logFiles, setLogFiles] = useState<string[]>([])
+  const [currentLog, setCurrentLog] = useState('')
+  const [selectedLog, setSelectedLog] = useState('')
+  const [isActive, setIsActive] = useState(false)
+  const [autoScroll, setAutoScroll] = useState(true)
+  const logRef = useRef<HTMLPreElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
+  const lastActivityRef = useRef(Date.now())
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (autoScroll && logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight
+    }
+  }, [logContent, autoScroll])
+
+  // Activity timeout — mark inactive after 30s of no updates
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > 30000) {
+        setIsActive(false)
+      }
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // SSE connection
+  useEffect(() => {
+    const logParam = selectedLog ? `?log=${encodeURIComponent(selectedLog)}` : ''
+    const url = `/chaos/api/notes/${noteId}/project/stream${logParam}`
+    const es = new EventSource(url)
+    eventSourceRef.current = es
+
+    es.addEventListener('progress', (e) => {
+      const data = JSON.parse(e.data)
+      setProgress(data.content)
+      lastActivityRef.current = Date.now()
+      setIsActive(true)
+    })
+
+    es.addEventListener('log', (e) => {
+      const data = JSON.parse(e.data)
+      if (data.initial) {
+        setLogContent(data.chunk)
+      } else {
+        setLogContent((prev) => prev + data.chunk)
+      }
+      if (data.file) setCurrentLog(data.file)
+      lastActivityRef.current = Date.now()
+      setIsActive(true)
+    })
+
+    es.addEventListener('logFiles', (e) => {
+      const data = JSON.parse(e.data)
+      setLogFiles(data.files)
+      if (data.current) setCurrentLog(data.current)
+    })
+
+    es.addEventListener('prd', () => {
+      // PRD changed — could trigger a refetch of backlog data
+      lastActivityRef.current = Date.now()
+      setIsActive(true)
+    })
+
+    es.onerror = () => {
+      setIsActive(false)
+    }
+
+    return () => {
+      es.close()
+      eventSourceRef.current = null
+    }
+  }, [noteId, selectedLog])
+
+  // Handle scroll — pause auto-scroll when user scrolls up
+  const handleLogScroll = useCallback(() => {
+    if (!logRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = logRef.current
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
+    setAutoScroll(isAtBottom)
+  }, [])
+
+  const handleLogSelect = (file: string) => {
+    setSelectedLog(file)
+    setLogContent('')
+    setCurrentLog(file)
+  }
+
+  return (
+    <div className="live-container">
+      <div className="live-header">
+        <div className="live-status">
+          <span className={`live-dot ${isActive ? 'active' : 'idle'}`} />
+          <span className="live-label">{isActive ? 'Running' : 'Idle'}</span>
+        </div>
+        {logFiles.length > 0 && (
+          <select
+            className="live-log-select"
+            value={selectedLog || currentLog}
+            onChange={(e) => handleLogSelect(e.target.value)}
+          >
+            {logFiles.map((f) => (
+              <option key={f} value={f}>
+                {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {progress && (
+        <details className="live-progress" open>
+          <summary>Progress</summary>
+          <div className="live-progress-content">
+            <Markdown remarkPlugins={[remarkGfm]}>{progress}</Markdown>
+          </div>
+        </details>
+      )}
+
+      <div className="live-log-wrapper">
+        <div className="live-log-toolbar">
+          <span className="live-log-filename">{currentLog || 'No logs'}</span>
+          {!autoScroll && (
+            <button
+              className="live-scroll-btn"
+              onClick={() => {
+                setAutoScroll(true)
+                if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+              }}
+            >
+              ↓ Scroll to bottom
+            </button>
+          )}
+        </div>
+        <pre
+          ref={logRef}
+          className="live-log"
+          onScroll={handleLogScroll}
+        >
+          {logContent || <span className="live-log-empty">No log output yet</span>}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
 // Note editor component
 function NoteEditor({
   noteId,
@@ -469,7 +619,7 @@ function NoteEditor({
   const [tagsInput, setTagsInput] = useState<string>('')
   const [isEditingTags, setIsEditingTags] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog'>('preview')
+  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog' | 'live'>('preview')
   // state sync handled below
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -626,12 +776,20 @@ function NoteEditor({
             Edit
           </button>
           {note.project && (
-            <button
-              className={viewMode === 'backlog' ? 'active' : ''}
-              onClick={() => setViewMode('backlog')}
-            >
-              Backlog
-            </button>
+            <>
+              <button
+                className={viewMode === 'backlog' ? 'active' : ''}
+                onClick={() => setViewMode('backlog')}
+              >
+                Backlog
+              </button>
+              <button
+                className={viewMode === 'live' ? 'active' : ''}
+                onClick={() => setViewMode('live')}
+              >
+                Live
+              </button>
+            </>
           )}
         </div>
         <div className="mobile-actions">
@@ -660,6 +818,9 @@ function NoteEditor({
       <div className="editor-body">
         {viewMode === 'backlog' && note.project && (
           <Backlog noteId={noteId} />
+        )}
+        {viewMode === 'live' && note.project && (
+          <LiveView noteId={noteId} />
         )}
         <div className={`editor-edit-pane ${viewMode !== 'edit' ? 'pane-hidden' : ''}`}>
           <div className="meta-bar editor-meta-block">
