@@ -429,19 +429,19 @@ function Backlog({ noteId }: { noteId: string }) {
         </p>
       ) : (
         <div className="backlog-stories">
-          {visible.map((story, index) => {
+          {visible.map((story) => {
             const blocked = story.dependsOn.some(dep => !doneIds.has(dep))
             const blockedBy = story.dependsOn.filter(dep => !doneIds.has(dep))
             return (
               <div key={story.id} className={`backlog-story ${blocked ? 'blocked' : ''}`}>
                 <div className="story-header">
-                  <span className="story-position">#{index + 1}</span>
+                  <span className="story-position">#{story.id}</span>
                   <span className="story-title">{story.title}</span>
                   <span className={`story-status status-${story.status}`}>{story.status}</span>
                 </div>
                 {blocked && (
                   <div className="story-blocked">
-                    Blocked by {blockedBy.map(id => `#${stories.findIndex(s => s.id === id) + 1}`).join(', ')}
+                    Blocked by {blockedBy.map(id => `#${id}`).join(', ')}
                   </div>
                 )}
                 {story.description && (
@@ -456,7 +456,7 @@ function Backlog({ noteId }: { noteId: string }) {
                 )}
                 {story.dependsOn.length > 0 && (
                   <div className="story-deps">
-                    Depends on: {story.dependsOn.map(id => `#${stories.findIndex(s => s.id === id) + 1}`).join(', ')}
+                    Depends on: {story.dependsOn.map(id => `#${id}`).join(', ')}
                   </div>
                 )}
               </div>
