@@ -467,9 +467,7 @@ function LiveView({ noteId }: { noteId: string }) {
   const [logFiles, setLogFiles] = useState<string[]>([])
   const [currentLog, setCurrentLog] = useState('')
   const [selectedLog, setSelectedLog] = useState('')
-  const [lastActivity, setLastActivity] = useState<number | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
-  const [connected, setConnected] = useState(false)
   const logRef = useRef<HTMLPreElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
@@ -487,25 +485,17 @@ function LiveView({ noteId }: { noteId: string }) {
     const es = new EventSource(url)
     eventSourceRef.current = es
 
-    let initialProgressReceived = false
     es.addEventListener('progress', (e) => {
       const data = JSON.parse(e.data)
-      const isFirst = !initialProgressReceived
-      initialProgressReceived = true
       setProgress(data.content)
-      // Only count as activity if it's an update, not the initial load
-      if (!isFirst) setLastActivity(Date.now())
     })
 
     es.addEventListener('log', (e) => {
       const data = JSON.parse(e.data)
       if (data.initial) {
         setLogContent(data.chunk)
-        // Use the file's actual mtime for initial activity timestamp
-        if (data.lastModified) setLastActivity(data.lastModified)
       } else {
         setLogContent((prev) => prev + data.chunk)
-        setLastActivity(Date.now())
       }
       if (data.file) setCurrentLog(data.file)
     })
@@ -514,15 +504,14 @@ function LiveView({ noteId }: { noteId: string }) {
       const data = JSON.parse(e.data)
       setLogFiles(data.files)
       if (data.current) setCurrentLog(data.current)
-      setConnected(true)
     })
 
     es.addEventListener('prd', () => {
-      setLastActivity(Date.now())
+      // PRD changed
     })
 
     es.onerror = () => {
-      setConnected(false)
+      // Connection lost
     }
 
     return () => {
@@ -545,56 +534,30 @@ function LiveView({ noteId }: { noteId: string }) {
     setCurrentLog(file)
   }
 
-  // Format last activity as relative time
-  const activityLabel = (() => {
-    if (!connected) return 'Connecting...'
-    if (!lastActivity) return 'No activity'
-    const ago = Math.floor((Date.now() - lastActivity) / 1000)
-    if (ago < 5) return 'Active now'
-    if (ago < 60) return `${ago}s ago`
-    if (ago < 3600) return `${Math.floor(ago / 60)}m ago`
-    return `${Math.floor(ago / 3600)}h ago`
-  })()
-
-  // Re-render the label periodically
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 5000)
-    return () => clearInterval(t)
-  }, [])
-
-  const isRecent = lastActivity != null && Date.now() - lastActivity < 30000
-
   return (
     <div className="live-container">
       <div className="live-header">
-        <div className="live-header-inner">
-          <div className="live-status">
-            <span className={`live-dot ${isRecent ? 'active' : 'idle'}`} />
-            <span className="live-label">{activityLabel}</span>
-          </div>
-          <select
-            className="live-log-select"
-            value={selectedLog || currentLog || ''}
-            onChange={(e) => handleLogSelect(e.target.value)}
-            disabled={logFiles.length === 0}
-          >
-            {logFiles.length === 0 ? (
-              <option value="">No logs</option>
-            ) : (
-              logFiles.map((f) => (
-                <option key={f} value={f}>
-                  {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
+        <select
+          className="live-log-select"
+          value={selectedLog || currentLog || ''}
+          onChange={(e) => handleLogSelect(e.target.value)}
+          disabled={logFiles.length === 0}
+        >
+          {logFiles.length === 0 ? (
+            <option value="">No logs</option>
+          ) : (
+            logFiles.map((f) => (
+              <option key={f} value={f}>
+                {f.replace(/\.log$/, '').replace(/[-_]/g, ' ')}
+              </option>
+            ))
+          )}
+        </select>
       </div>
 
       <details className="live-progress" open>
         <summary>Progress</summary>
-        <div className="live-progress-content">
+        <div className="live-progress-content editor-preview">
           {progress ? (
             <Markdown remarkPlugins={[remarkGfm]}>{progress}</Markdown>
           ) : (

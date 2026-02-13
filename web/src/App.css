@@ -1036,54 +1036,10 @@
 .live-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: var(--space-sm) var(--space-lg);
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
   flex-shrink: 0;
-}
-
-.live-header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 400px;
-  width: 100%;
-}
-
-.live-status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #555;
-}
-
-.live-dot.active {
-  background: #4ade80;
-  box-shadow: 0 0 6px #4ade8088;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-.live-dot.idle {
-  background: #666;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.live-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .live-log-select {
@@ -1093,7 +1049,7 @@
   border-radius: 4px;
   padding: var(--space-xs) var(--space-sm);
   font-size: 0.8rem;
-  max-width: 260px;
+  min-width: 320px;
   cursor: pointer;
 }
 
@@ -1191,7 +1147,8 @@
   }
 
   .live-log-select {
-    max-width: 180px;
+    min-width: 0;
+    width: 100%;
   }
 
   .live-progress summary {
