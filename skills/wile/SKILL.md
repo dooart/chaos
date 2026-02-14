@@ -13,8 +13,6 @@ Source code: `~/opensrc/repos/github.com/dooart/wile`
 
 Chaos notes can link to a project via the `project:` frontmatter field. The path is relative to the chaos data directory (default `~/.chaos`).
 
-Example:
-
 ```yaml
 ---
 id: abc123def456ghi789012
@@ -67,12 +65,55 @@ Each project has a `.wile/prd.json`. This is the stories backlog that Wile proce
 | `id` | number | Unique story identifier |
 | `title` | string | Short summary of the story |
 | `description` | string | Detailed description of what to implement |
-| `acceptanceCriteria` | string[] | List of criteria that must be met |
+| `acceptanceCriteria` | string[] | Concrete, verifiable checks (commands to run, files to check) |
 | `dependsOn` | number[] | IDs of stories that must be done first |
 | `status` | string | `"pending"` or `"done"` |
 | `compactedFrom` | string? | Range of compacted story IDs, e.g. `"1..3,5"` (done stories only) |
 
 Array position determines priority — earlier stories are implemented first.
+
+## Configuring Wile in a Project
+
+Before running Wile, the project needs a `.wile/` directory with configuration. Use the non-interactive config command:
+
+```bash
+cd <project-dir>
+
+# Print config reference (all fields, requirements, examples):
+bunx wile config --non-interactive
+
+# Apply config with a JSON payload:
+bunx wile config --non-interactive '<json>'
+```
+
+The `--non-interactive` flag prints full documentation of every field. Read that output to determine what JSON to pass.
+
+### Configuration Workflow
+
+When a user asks you to configure Wile for a project:
+
+1. **Ask the user** which coding agent they want: Claude Code (CC), Codex (CX), Gemini CLI (GC), or OpenCode (OC).
+
+2. **Determine repo source**: If the project is already on disk (typical for chaos projects), use `"repoSource": "local"`. If the user wants Wile to clone from GitHub, use `"repoSource": "github"` and ask for the repo URL.
+
+3. **GitHub token** (only if `repoSource=github`):
+   - Check if `gh` CLI is available and authenticated: `gh auth status`
+   - If yes, create a fine-grained PAT automatically:
+     ```bash
+     gh auth token
+     ```
+     Use that token as `githubToken`. This avoids asking the user to manually create a token.
+   - If `gh` is not available or not authenticated, ask the user to provide a GitHub token.
+
+4. **Coding agent credentials**: Ask the user for the auth token or API key for their chosen agent. The `--non-interactive` help output lists exactly which fields are needed per agent.
+
+5. **Apply the config**:
+   ```bash
+   cd <project-dir>
+   bunx wile config --non-interactive '{"codingAgent": "CX", "repoSource": "local", ...}'
+   ```
+
+**Key principle:** Only ask the user for things you can't determine yourself. Preferences (agent, model) and secrets (tokens) come from the user. Everything else (branch name, iterations, paths) has sensible defaults.
 
 ## Running Wile
 
@@ -80,32 +121,15 @@ Array position determines priority — earlier stories are implemented first.
 cd <project-dir> && bunx wile run
 ```
 
-The project must have `.wile/secrets/.env` configured before running. For local projects (not cloned by Wile), set `WILE_REPO_SOURCE=local`.
-
-## Setting Up `.wile/secrets/.env`
-
-If `.wile/secrets/.env` doesn't exist in the project, walk the user through setup:
-
-```bash
-cd <project-dir> && bunx wile config
-```
-
-This interactive wizard will prompt for:
-
-1. **`CODING_AGENT`** — which coding agent CLI to use:
-   - `CC` — Claude Code
-   - `CX` — Codex
-   - `GC` — Gemini CLI
-   - `OC` — OpenCode
-
-2. **Credentials** — API keys or auth tokens for the chosen agent
-
-3. **`WILE_REPO_SOURCE`** — set to `local` for local projects (the project repo already exists on disk)
+The project must have `.wile/secrets/.env` configured before running (see above).
 
 ## Monitoring Progress
 
-While Wile is running, you can monitor its progress:
+While Wile is running:
 
-- **Learnings & progress:** check `.wile/progress.txt` in the project directory
-- **Commits:** run `git log` in the project directory to see what Wile has committed
-- **Story status:** check `.wile/prd.json` (Wile's working copy) for updated story statuses
+- **Progress & learnings:** `.wile/progress.txt` in the project directory
+- **Commits:** `git log` in the project directory
+- **Story status:** `.wile/prd.json` — Wile marks stories as `"done"` as it completes them
+- **Logs:** `.wile/logs/` — one log file per run
+
+If the project is linked to a chaos note, progress and logs are also visible in the chaos web UI under the Backlog tab (Logs and Progress sub-tabs).
