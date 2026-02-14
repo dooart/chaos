@@ -78,6 +78,8 @@ Markdown body...
 
 All operations use the TypeScript CLI at `{baseDir}/scripts/chaos.ts`. Run with `bun`. If the data directory has a `.git` folder, operations auto-commit and push changes.
 
+**Hard rule:** do **not** edit note files directly (`~/.chaos/notes/*.md`). For any note create/update/rename/delete/tag/status/image operation, always go through `chaos.ts` (or wrappers that call it).
+
 ### Create a New Note
 
 ```bash
