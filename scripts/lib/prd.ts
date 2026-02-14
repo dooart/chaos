@@ -5,6 +5,7 @@ export interface PrdStory {
   acceptanceCriteria: string[];
   dependsOn: number[];
   status: "pending" | "done";
+  compactedFrom?: string;
 }
 
 export interface PrdValidation {
@@ -81,6 +82,20 @@ export function validatePrd(raw: unknown): PrdValidation {
     if (!visited.has(s.id) && hasCycleDFS(s.id)) {
       errors.push("dependency cycle detected");
       break;
+    }
+  }
+
+  // Check for runnable stories (same check wile does at startup)
+  const pending = stories.filter(s => s.status === "pending");
+  if (pending.length > 0) {
+    const hasRunnable = stories.some(
+      s => s.status === "pending" && s.dependsOn.every(dep => {
+        const depStory = stories.find(d => d.id === dep);
+        return depStory?.status === "done";
+      })
+    );
+    if (!hasRunnable) {
+      errors.push("no runnable stories: all pending stories are blocked by dependencies");
     }
   }
 

@@ -37,8 +37,9 @@ Each project has a `.wile/prd.json`. This is the stories backlog that Wile proce
       "title": "Set up project scaffolding",
       "description": "Initialize the project with the basic structure.",
       "acceptanceCriteria": [
-        "Project builds successfully",
-        "README exists with setup instructions"
+        "package.json exists with correct name",
+        "`npm run build` exits with code 0",
+        "README.md exists with setup instructions"
       ],
       "dependsOn": [],
       "status": "done"
@@ -48,8 +49,9 @@ Each project has a `.wile/prd.json`. This is the stories backlog that Wile proce
       "title": "Implement core feature",
       "description": "Build the main functionality.",
       "acceptanceCriteria": [
-        "Feature works end to end",
-        "Tests pass"
+        "`npm test` passes all assertions",
+        "src/core.ts exports the main function",
+        "`npm run typecheck` exits with code 0"
       ],
       "dependsOn": [1],
       "status": "pending"
@@ -68,6 +70,7 @@ Each project has a `.wile/prd.json`. This is the stories backlog that Wile proce
 | `acceptanceCriteria` | string[] | List of criteria that must be met |
 | `dependsOn` | number[] | IDs of stories that must be done first |
 | `status` | string | `"pending"` or `"done"` |
+| `compactedFrom` | string? | Range of compacted story IDs, e.g. `"1..3,5"` (done stories only) |
 
 Array position determines priority — earlier stories are implemented first.
 
