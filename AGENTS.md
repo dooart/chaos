@@ -4,13 +4,13 @@ This file helps AI coding assistants work on the Chaos Notes codebase.
 
 ## Overview
 
-Chaos Notes is a skill/tool for managing personal notes. It works with any AI agent that can run shell commands (OpenClaw, Claude Code, Codex, etc.). Notes are markdown files with stable IDs, managed via bash scripts.
+Chaos Notes is a skill/tool for managing personal notes. It works with any AI agent that can run shell commands (OpenClaw, Claude Code, Codex, etc.). Notes are markdown files with stable IDs, managed via a TypeScript CLI (`scripts/chaos.ts`).
 
 ## Key Directories
 
 | Directory | Purpose |
 |-----------|--------|
-| `scripts/` | Bash scripts for note CRUD |
+| `scripts/` | TypeScript CLI and libs for note CRUD |
 | `web/` | React frontend + Hono/Bun server |
 | `data/` | Symlink to user's data (notes + assets) |
 | `tests/` | Test files |
@@ -23,15 +23,15 @@ For creating, editing, searching, or deleting notes, read:
 SKILL.md
 ```
 
-This contains the full API for note management. **Always use the scripts** — they handle validation and optional git commits.
+This contains the full API for note management. **Always use the CLI** — it handles validation and optional git commits.
 
 ## Architecture
 
 ### Scripts (`scripts/`)
 
-- Pure bash + `bun` for frontmatter parsing
-- Each script validates, modifies files, then commits/pushes if `data/.git` exists
-- `parse-frontmatter.ts` — TypeScript helper using `gray-matter`
+- TypeScript CLI (`chaos.ts`) and library modules in `lib/`
+- Each operation validates, modifies files, then commits/pushes if `data/.git` exists
+- Uses `gray-matter` for frontmatter parsing, `sharp` for image processing
 
 ### Web (`web/`)
 
@@ -91,11 +91,12 @@ SETUP.md
 
 ### Modifying note validation
 
-1. Update `scripts/commit-changes.sh` (validates frontmatter)
+1. Update the relevant function in `scripts/lib/`
 2. Update `SKILL.md` to reflect new rules
 
-### Adding a new script
+### Adding a new command
 
-1. Create `scripts/your-script.sh`
-2. Follow pattern: validate → modify → git (if enabled)
-3. Document in `SKILL.md`
+1. Add a function in `scripts/lib/`
+2. Wire it up in `scripts/chaos.ts`
+3. Follow pattern: validate → modify → git (if enabled)
+4. Document in `SKILL.md`

@@ -5,14 +5,14 @@ import { readdir, readFile, writeFile, stat, readlink, lstat } from "fs/promises
 import { join, dirname, resolve } from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
-import { spawn } from "child_process";
+import { newNote as createNote, updateNote, renameNote as renameNoteLib, deleteNote as deleteNoteLib } from "../scripts/lib/notes.ts";
+import { commitAndPush } from "../scripts/lib/git.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = dirname(__dirname);
 const DATA_DIR = join(SKILL_ROOT, "data");
 const NOTES_DIR = join(DATA_DIR, "notes");
 const ASSETS_DIR = join(DATA_DIR, "assets");
-const SCRIPTS_DIR = join(SKILL_ROOT, "scripts");
 
 const AUTH_USER = process.env.AUTH_USER || "";
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "";
@@ -80,26 +80,7 @@ app.get("/chaos/logout", (c) => {
   return c.redirect("/chaos/");
 });
 
-// Helper to run scripts
-function runScript(script: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve) => {
-    const proc = spawn("bash", [join(SCRIPTS_DIR, script), ...args], {
-      cwd: SKILL_ROOT,
-    });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (data) => (stdout += data));
-    proc.stderr.on("data", (data) => (stderr += data));
-    proc.on("close", (code) => {
-      const result = { stdout, stderr, code: code ?? 1 };
-      if (result.code !== 0) {
-        console.error(`[script error] ${script} ${args.join(' ')}`);
-        console.error(result.stderr || result.stdout);
-      }
-      resolve(result);
-    });
-  });
-}
+
 
 // Helper to parse frontmatter
 function parseFrontmatter(content: string): { frontmatter: Record<string, any>; body: string } {
@@ -264,18 +245,14 @@ app.post("/chaos/api/notes", async (c) => {
     return c.json({ error: "Title is required" }, 400);
   }
   
-  const result = await runScript("new-note.sh", [title]);
-  
-  if (result.code !== 0) {
-    return c.json({ error: result.stderr || "Failed to create note" }, 500);
+  try {
+    const filepath = createNote(title);
+    const filename = filepath.split("/").pop() || "";
+    const id = filename.split("-")[0];
+    return c.json({ id, filepath });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
   }
-  
-  // Extract ID from filepath
-  const filepath = result.stdout.trim();
-  const filename = filepath.split("/").pop() || "";
-  const id = filename.split("-")[0];
-  
-  return c.json({ id, filepath });
 });
 
 // Update note content
@@ -294,13 +271,7 @@ app.put("/chaos/api/notes/:id", async (c) => {
     
     const filepath = join(NOTES_DIR, filename);
     await writeFile(filepath, content);
-    
-    const result = await runScript("commit-changes.sh", [filepath]);
-    
-    if (result.code !== 0) {
-      return c.json({ error: result.stderr || "Failed to commit" }, 500);
-    }
-    
+    commitAndPush(DATA_DIR, [filepath], `updated note ${id}`);
     return c.json({ success: true });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -317,26 +288,24 @@ app.post("/chaos/api/notes/:id/rename", async (c) => {
     return c.json({ error: "Title is required" }, 400);
   }
   
-  const result = await runScript("rename-note.sh", [id, title]);
-  
-  if (result.code !== 0) {
-    return c.json({ error: result.stderr || "Failed to rename note" }, 500);
+  try {
+    const filepath = renameNoteLib(id, title);
+    return c.json({ success: true, filepath });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
   }
-  
-  return c.json({ success: true, filepath: result.stdout.trim() });
 });
 
 // Delete note
 app.delete("/chaos/api/notes/:id", async (c) => {
   const id = c.req.param("id");
   
-  const result = await runScript("delete-note.sh", [id]);
-  
-  if (result.code !== 0) {
-    return c.json({ error: result.stderr || "Failed to delete note" }, 500);
+  try {
+    deleteNoteLib(id);
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
   }
-  
-  return c.json({ success: true });
 });
 
 // PRD validation — uses shared lib

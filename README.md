@@ -74,14 +74,14 @@ After setup, ask your AI agent:
 - "Search my notes for anything about AI"
 - "Update my todo note with a new item"
 
-Or use scripts directly:
+Or use the CLI directly:
 
 ```bash
 # Create a note
-./scripts/new-note.sh "My First Note"
+bun scripts/chaos.ts new "My First Note"
 
 # Search notes
-./scripts/search-notes.sh "keyword"
+bun scripts/chaos.ts search "keyword"
 
 # Start the web UI
 cd web && bun run server.ts
