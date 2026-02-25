@@ -333,12 +333,24 @@ function NoteList({
   )
 }
 
-// Simple markdown to HTML (basic)
 // Process [[id]] and [[id|text]] links before rendering
-function processInternalLinks(text: string): string {
+function processInternalLinks(text: string, titleById: Record<string, string> = {}): string {
   return text
     .replace(/\[\[([a-z0-9]{21})\|([^\]]+)\]\]/g, '[$2](/chaos/note/$1)')
-    .replace(/\[\[([a-z0-9]{21})\]\]/g, '[[$1]]')
+    .replace(/\[\[([a-z0-9]{21})\]\]/g, (_, id: string) => {
+      const label = titleById[id] || id
+      return `[${label}](/chaos/note/${id})`
+    })
+}
+
+function extractPlainLinkedIds(text: string): string[] {
+  const ids = new Set<string>()
+  const regex = /\[\[([a-z0-9]{21})\]\]/g
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(text)) !== null) {
+    ids.add(match[1])
+  }
+  return Array.from(ids)
 }
 
 // Backlog component
@@ -602,6 +614,7 @@ function NoteEditor({
   const [isEditingTags, setIsEditingTags] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog'>('preview')
+  const [linkTitles, setLinkTitles] = useState<Record<string, string>>({})
   // state sync handled below
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -675,6 +688,37 @@ function NoteEditor({
   }
 
   const previewBody = currentBody
+
+  useEffect(() => {
+    const ids = extractPlainLinkedIds(previewBody)
+    const missingIds = ids.filter((id) => !linkTitles[id])
+
+    if (missingIds.length === 0) return
+
+    let cancelled = false
+
+    Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          const linkedNote = await api.getNote(id)
+          return { id, title: linkedNote.title }
+        } catch {
+          return { id, title: id }
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return
+      setLinkTitles((prev) => {
+        const next = { ...prev }
+        for (const { id, title } of results) next[id] = title
+        return next
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [previewBody, linkTitles])
 
   // Keyboard shortcut
   useEffect(() => {
@@ -879,7 +923,7 @@ function NoteEditor({
               }
             }}
           >
-            {processInternalLinks(previewBody)}
+            {processInternalLinks(previewBody, linkTitles)}
           </Markdown>
         </div>
       </div>
