@@ -13,7 +13,7 @@ Notes are stored at `~/.chaos` by default. The data directory and symlink are cr
 
 To use a custom location, set `CHAOS_DATA_DIR` environment variable.
 
-If the web server isn't running or dependencies are missing, guide the user to `{baseDir}/SETUP.md`.
+If dependencies are missing (e.g. module not found errors), run `bun install` from `{baseDir}`. If the web server isn't running, guide the user to `{baseDir}/SETUP.md`.
 
 ## When to Use This Skill
 

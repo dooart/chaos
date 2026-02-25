@@ -33,7 +33,7 @@ git clone https://github.com/dooart/chaos.git ~/.claude/skills
 git clone https://github.com/dooart/chaos.git /path/to/skills
 ```
 
-**❗ After cloning, complete setup.** See **[SETUP.md](SETUP.md)** to configure the web UI and optional git backup. The data directory (`~/.chaos`) is created automatically on first use.
+**❗ After cloning, run `bun install` from the repo root** to install all dependencies (scripts + web). Then see **[SETUP.md](SETUP.md)** to configure the web UI and optional git backup. The data directory (`~/.chaos`) is created automatically on first use.
 
 Follows the [AgentSkills](https://skill.md) format supported by most AI coding agents.
 

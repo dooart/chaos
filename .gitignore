@@ -2,6 +2,7 @@
 data
 
 # Dependencies
+node_modules/
 web/node_modules/
 scripts/node_modules/
 

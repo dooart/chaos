@@ -56,14 +56,18 @@ Symlink to `~/.chaos` (default) containing:
 ### Prerequisites
 
 - Bun (JavaScript runtime)
-- jq (JSON processing)
-- ImageMagick (for image processing)
+
+### Install dependencies
+
+```bash
+# From the repo root — installs scripts + web deps (Bun workspace monorepo)
+bun install
+```
 
 ### Running the web server
 
 ```bash
 cd web
-bun install
 bun run server.ts
 ```
 

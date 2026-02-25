@@ -5,8 +5,6 @@ This guide helps you set up Chaos Notes. The skill can be used with any AI agent
 ## Prerequisites
 
 - **Bun** — JavaScript runtime ([install](https://bun.sh))
-- **jq** — JSON processor (`apt install jq` or `brew install jq`)
-- **ImageMagick** — for image processing (`apt install imagemagick` or `brew install imagemagick`)
 
 ## 1. Install the Skill
 
@@ -23,12 +21,14 @@ git clone https://github.com/dooart/chaos.git ~/.claude/skills
 git clone https://github.com/dooart/chaos.git /path/to/skills
 ```
 
-## 2. Install Web Dependencies
+## 2. Install Dependencies
 
 ```bash
-cd /path/to/skills/chaos/web
+cd /path/to/skills/chaos
 bun install
 ```
+
+This installs dependencies for both the CLI scripts and the web UI (Bun workspace monorepo).
 
 ## 3. Configure Web UI Authentication
 
@@ -133,6 +133,14 @@ The skill follows the [AgentSkills](https://skill.md) format, which is supported
 Ensure bun is in your PATH:
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
+```
+
+### Module not found / sharp errors
+
+Run `bun install` from the repo root:
+```bash
+cd /path/to/skills/chaos
+bun install
 ```
 
 ### Git push fails
