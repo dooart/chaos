@@ -254,13 +254,6 @@ function NoteList({
   
   const notes = data?.pages.flatMap((p) => p.notes) || []
   
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
-    if (scrollHeight - scrollTop <= clientHeight * 1.5 && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage()
-    }
-  }
-  
   return (
     <div className="note-list">
       <div className="list-header">
@@ -276,28 +269,41 @@ function NoteList({
         </button>
       </div>
       
-      <div className="notes-container" onScroll={handleScroll}>
+      <div className="notes-container">
         {isLoading ? (
           <p className="loading">Loading...</p>
         ) : notes.length === 0 ? (
           <p className="empty">No notes found</p>
         ) : (
-          notes.map((note) => (
-            <div
-              key={note.id}
-              className={`note-item ${selectedId === note.id ? 'selected' : ''}`}
-              onClick={() => onSelectNote(note.id)}
-            >
-              <span className="note-title">{note.title}</span>
-              {note.status && (
-                <span className={`note-status status-${note.status}`}>
-                  {note.status}
-                </span>
-              )}
-            </div>
-          ))
+          <>
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className={`note-item ${selectedId === note.id ? 'selected' : ''}`}
+                onClick={() => onSelectNote(note.id)}
+              >
+                <span className="note-title">{note.title}</span>
+                {note.status && (
+                  <span className={`note-status status-${note.status}`}>
+                    {note.status}
+                  </span>
+                )}
+              </div>
+            ))}
+
+            {(hasNextPage || isFetchingNextPage) && (
+              <div className="load-more-wrap">
+                <button
+                  className="load-more-btn"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? 'Loading...' : 'Load more'}
+                </button>
+              </div>
+            )}
+          </>
         )}
-        {isFetchingNextPage && <p className="loading">Loading more...</p>}
       </div>
       
       {showNewModal && (
