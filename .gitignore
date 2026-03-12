@@ -15,3 +15,4 @@ web/.env
 # Misc
 .DS_Store
 *.log
+temp/

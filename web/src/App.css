@@ -95,11 +95,14 @@
 
 .list-header {
   padding: 0 var(--space-lg);
-  height: 72px;
+  min-height: 72px;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-sm);
 }
 
 .search-input {
@@ -121,6 +124,28 @@
 
 .search-input::placeholder {
   color: var(--text-muted);
+}
+
+.kind-filter,
+.modal-select {
+  padding: var(--space-sm) var(--space-xl) var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.875rem;
+  appearance: none;
+  min-width: 108px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-sm) center;
+}
+
+.kind-filter:focus,
+.modal-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .new-btn {
@@ -187,6 +212,47 @@
   border-radius: 999px;
   background: var(--bg-elevated);
   color: var(--text-muted);
+}
+
+.note-kind {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.kind-project {
+  color: #c8b37b;
+  border-color: rgba(200, 179, 123, 0.35);
+  background: rgba(200, 179, 123, 0.1);
+}
+
+.kind-research {
+  color: #82bdd9;
+  border-color: rgba(130, 189, 217, 0.35);
+  background: rgba(130, 189, 217, 0.1);
+}
+
+.kind-thought {
+  color: #c593d8;
+  border-color: rgba(197, 147, 216, 0.35);
+  background: rgba(197, 147, 216, 0.1);
+}
+
+.kind-core {
+  color: #8dc7a6;
+  border-color: rgba(141, 199, 166, 0.35);
+  background: rgba(141, 199, 166, 0.1);
+}
+
+.kind-legacy {
+  color: var(--text-muted);
+  border-style: dashed;
 }
 
 .status-building {
@@ -744,6 +810,11 @@
   background: var(--bg);
   color: var(--text);
   font-size: 1rem;
+  margin-bottom: var(--space-lg);
+}
+
+.modal-select {
+  width: 100%;
   margin-bottom: var(--space-lg);
 }
 

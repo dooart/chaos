@@ -5,9 +5,20 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import './App.css'
 
 // Types
+type NoteKind = 'core' | 'project' | 'research' | 'thought'
+type NoteKindFilter = NoteKind | 'all'
+
+const NOTE_KIND_OPTIONS: Array<{ value: NoteKind; label: string }> = [
+  { value: 'project', label: 'Project' },
+  { value: 'research', label: 'Research' },
+  { value: 'thought', label: 'Thought' },
+  { value: 'core', label: 'Core' },
+]
+
 interface Note {
   id: string
   title: string
+  kind: NoteKind | null
   status: string | null
   tags: string[]
   filename: string
@@ -96,13 +107,14 @@ const api = {
     await fetch('/chaos/auth/logout', { method: 'POST' })
   },
   
-  async getNotes(page: number, limit: number, search: string): Promise<{
+  async getNotes(page: number, limit: number, search: string, kind: NoteKindFilter): Promise<{
     notes: Note[]
     total: number
     hasMore: boolean
   }> {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) })
     if (search) params.set('search', search)
+    params.set('kind', kind)
     const res = await fetch(`/chaos/api/notes?${params}`)
     if (!res.ok) throw new Error('Failed to fetch notes')
     return res.json()
@@ -114,11 +126,11 @@ const api = {
     return res.json()
   },
   
-  async createNote(title: string): Promise<{ id: string }> {
+  async createNote(title: string, kind: NoteKind): Promise<{ id: string }> {
     const res = await fetch('/chaos/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, kind }),
     })
     if (!res.ok) {
       const data = await res.json()
@@ -215,8 +227,10 @@ function NoteList({
 }) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [kindFilter, setKindFilter] = useState<NoteKindFilter>('project')
   const [showNewModal, setShowNewModal] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  const [newKind, setNewKind] = useState<NoteKind>('project')
   const queryClient = useQueryClient()
   const { addToast } = useToast()
   
@@ -233,19 +247,20 @@ function NoteList({
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ['notes', debouncedSearch],
-    queryFn: ({ pageParam = 1 }) => api.getNotes(pageParam, 20, debouncedSearch),
+    queryKey: ['notes', debouncedSearch, kindFilter],
+    queryFn: ({ pageParam = 1 }) => api.getNotes(pageParam, 20, debouncedSearch, kindFilter),
     getNextPageParam: (lastPage, pages) =>
       lastPage.hasMore ? pages.length + 1 : undefined,
     initialPageParam: 1,
   })
   
   const createMutation = useMutation({
-    mutationFn: (title: string) => api.createNote(title),
+    mutationFn: ({ title, kind }: { title: string; kind: NoteKind }) => api.createNote(title, kind),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['notes'] })
       setShowNewModal(false)
       setNewTitle('')
+      setNewKind('project')
       onSelectNote(data.id)
       addToast('success', 'Note created')
     },
@@ -264,6 +279,18 @@ function NoteList({
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
         />
+        <select
+          className="kind-filter"
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value as NoteKindFilter)}
+          aria-label="Filter notes by kind"
+        >
+          <option value="project">Project</option>
+          <option value="research">Research</option>
+          <option value="thought">Thought</option>
+          <option value="core">Core</option>
+          <option value="all">All</option>
+        </select>
         <button className="new-btn" onClick={() => setShowNewModal(true)}>
           + New
         </button>
@@ -283,6 +310,9 @@ function NoteList({
                 onClick={() => onSelectNote(note.id)}
               >
                 <span className="note-title">{note.title}</span>
+                <span className={`note-kind ${note.kind ? `kind-${note.kind}` : 'kind-legacy'}`}>
+                  {note.kind ?? 'legacy'}
+                </span>
                 {note.status && (
                   <span className={`note-status status-${note.status}`}>
                     {note.status}
@@ -318,15 +348,26 @@ function NoteList({
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newTitle.trim()) {
-                  createMutation.mutate(newTitle.trim())
+                  createMutation.mutate({ title: newTitle.trim(), kind: newKind })
                 }
               }}
             />
+            <select
+              className="modal-select"
+              value={newKind}
+              onChange={(e) => setNewKind(e.target.value as NoteKind)}
+            >
+              {NOTE_KIND_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <div className="modal-actions">
               <button onClick={() => setShowNewModal(false)}>Cancel</button>
               <button
                 className="primary"
-                onClick={() => newTitle.trim() && createMutation.mutate(newTitle.trim())}
+                onClick={() => newTitle.trim() && createMutation.mutate({ title: newTitle.trim(), kind: newKind })}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? 'Creating...' : 'Create'}
@@ -603,49 +644,45 @@ function ProgressView({ noteId }: { noteId: string }) {
 }
 
 // Note editor component
-function NoteEditor({
+function LoadedNoteEditor({
+  note,
   noteId,
   onClose,
   onNavigate,
 }: {
+  note: NoteDetail
   noteId: string
   onClose: () => void
   onNavigate: (id: string) => void
 }) {
-  const [editedContent, setEditedContent] = useState<string | null>(null)
-  const [editedTitle, setEditedTitle] = useState<string | null>(null)
-  const [editedStatus, setEditedStatus] = useState<string>('')
-  const [editedTags, setEditedTags] = useState<string[]>([])
-  const [tagsInput, setTagsInput] = useState<string>('')
+  const [editedContent, setEditedContent] = useState(note.body)
+  const [editedTitle, setEditedTitle] = useState(note.title)
+  const [editedKind, setEditedKind] = useState<NoteKind | ''>(note.kind ?? '')
+  const [editedStatus, setEditedStatus] = useState<string>(note.status ?? '')
+  const [editedTags, setEditedTags] = useState<string[]>(note.tags ?? [])
+  const [tagsInput, setTagsInput] = useState<string>((note.tags ?? []).join(' '))
   const [isEditingTags, setIsEditingTags] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'backlog'>('preview')
   const [linkTitles, setLinkTitles] = useState<Record<string, string>>({})
-  // state sync handled below
+  const [savedState, setSavedState] = useState(() => ({
+    title: note.title,
+    kind: note.kind ?? '',
+    status: note.status ?? '',
+    tags: note.tags ?? [],
+    body: note.body,
+  }))
   const queryClient = useQueryClient()
   const { addToast } = useToast()
-  
-  const { data: note, isLoading } = useQuery({
-    queryKey: ['note', noteId],
-    queryFn: () => api.getNote(noteId),
-  })
 
   useEffect(() => {
-    if (note) {
-      setEditedStatus(note.status ?? '')
-      setEditedTags(note.tags ?? [])
-      setTagsInput((note.tags ?? []).join(' '))
-      setEditedContent(null)
-      setEditedTitle(null)
-      setIsEditingTags(false)
-      document.title = `${note.title} - Chaos`
-    }
+    document.title = `${note.title} - Chaos`
     return () => { document.title = 'Chaos' }
-  }, [noteId, note])
+  }, [note.title])
   
   const updateMutation = useMutation({
     mutationFn: ({ content, title, hasBodyMetaChange }: { content: string; title: string; hasBodyMetaChange: boolean }) => {
-      const titleChanged = title !== note?.title
+      const titleChanged = title !== savedState.title
       if (titleChanged) {
         return api.renameNote(noteId, title).then(() => {
           if (hasBodyMetaChange) {
@@ -661,8 +698,13 @@ function NoteEditor({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note', noteId] })
       queryClient.invalidateQueries({ queryKey: ['notes'] })
-      setEditedContent(null)
-      setEditedTitle(null)
+      setSavedState({
+        title: editedTitle,
+        kind: editedKind,
+        status: editedStatus,
+        tags: editedTags,
+        body: editedContent,
+      })
       addToast('success', 'Saved')
     },
     onError: (e: Error) => addToast('error', e.message),
@@ -678,19 +720,21 @@ function NoteEditor({
     onError: (e: Error) => addToast('error', e.message),
   })
   
-  const currentBody = editedContent ?? note?.body ?? ''
-  const currentTitle = editedTitle ?? note?.title ?? ''
-  const hasTitleChange = editedTitle !== null && editedTitle !== (note?.title ?? '')
-  const hasStatusChange = editedStatus !== (note?.status ?? '')
-  const hasTagsChange = (editedTags.join(' ') !== (note?.tags ?? []).join(' '))
-  const hasBodyMetaChange = editedContent !== null || hasStatusChange || hasTagsChange
+  const currentBody = editedContent
+  const currentTitle = editedTitle
+  const hasTitleChange = editedTitle !== savedState.title
+  const hasKindChange = editedKind !== savedState.kind
+  const hasStatusChange = editedStatus !== savedState.status
+  const hasTagsChange = editedTags.join(' ') !== savedState.tags.join(' ')
+  const hasBodyMetaChange = editedContent !== savedState.body || hasKindChange || hasStatusChange || hasTagsChange
   const hasChanges = hasTitleChange || hasBodyMetaChange
 
   const buildContent = () => {
-    if (!note) return ''
+    const kindLine = editedKind ? `kind: ${editedKind}\n` : ''
     const statusLine = editedStatus ? `status: ${editedStatus}\n` : ''
     const tagsLine = editedTags.length ? `tags: [${editedTags.join(', ')}]\n` : ''
-    return `---\nid: ${note.id}\ntitle: ${currentTitle}\n${statusLine}${tagsLine}---\n\n${currentBody}`
+    const projectLine = note.project ? `project: ${note.project}\n` : ''
+    return `---\nid: ${note.id}\ntitle: ${currentTitle}\n${kindLine}${statusLine}${tagsLine}${projectLine}---\n\n${currentBody}`
   }
 
   const previewBody = currentBody
@@ -743,10 +787,6 @@ function NoteEditor({
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   })
-
-  if (isLoading || !note) {
-    return <div className="editor-container"><p className="loading">Loading...</p></div>
-  }
   
   return (
     <div className="editor-container">
@@ -754,7 +794,7 @@ function NoteEditor({
         <div className="header-title-row">
           <input
             type="text"
-            className={`title-input ${editedTitle !== null ? 'modified' : ''}`}
+            className={`title-input ${hasTitleChange ? 'modified' : ''}`}
             value={currentTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
           />
@@ -849,6 +889,20 @@ function NoteEditor({
         <div className={`editor-edit-pane ${viewMode !== 'edit' ? 'pane-hidden' : ''}`}>
           <div className="meta-bar editor-meta-block">
             <div className="meta-item">
+              <label>Kind</label>
+              <select
+                value={editedKind}
+                onChange={(e) => setEditedKind(e.target.value as NoteKind | '')}
+              >
+                <option value="">legacy / none</option>
+                {NOTE_KIND_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="meta-item">
               <label>Status</label>
               <select
                 value={editedStatus}
@@ -897,7 +951,7 @@ function NoteEditor({
             {/* actions are in header */}
           </div>
           <textarea
-            className={`editor-textarea ${editedContent !== null ? 'modified' : ''}`}
+            className={`editor-textarea ${editedContent !== savedState.body ? 'modified' : ''}`}
             value={currentBody}
             onChange={(e) => setEditedContent(e.target.value)}
           />
@@ -953,6 +1007,35 @@ function NoteEditor({
         </div>
       )}
     </div>
+  )
+}
+
+function NoteEditor({
+  noteId,
+  onClose,
+  onNavigate,
+}: {
+  noteId: string
+  onClose: () => void
+  onNavigate: (id: string) => void
+}) {
+  const { data: note, isLoading } = useQuery({
+    queryKey: ['note', noteId],
+    queryFn: () => api.getNote(noteId),
+  })
+
+  if (isLoading || !note) {
+    return <div className="editor-container"><p className="loading">Loading...</p></div>
+  }
+
+  return (
+    <LoadedNoteEditor
+      key={note.id}
+      note={note}
+      noteId={noteId}
+      onClose={onClose}
+      onNavigate={onNavigate}
+    />
   )
 }
 

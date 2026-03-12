@@ -1,12 +1,15 @@
 import { readdirSync, readFileSync, renameSync, unlinkSync } from "fs";
 import { join, basename } from "path";
-import { getEnv, type ChaosEnv } from "./env.ts";
+import { getEnv } from "./env.ts";
 import {
   parseNote,
   writeNote,
   slugify,
   generateId,
+  DEFAULT_NOTE_KIND,
+  readNoteKind,
   type NoteFrontmatter,
+  type NoteKind,
 } from "./frontmatter.ts";
 import { commitAndPush, gitAddAll, gitCommit, gitPush, isGitRepo } from "./git.ts";
 
@@ -16,19 +19,24 @@ function findNoteFile(notesDir: string, id: string): string | null {
   return match ? join(notesDir, match) : null;
 }
 
-export function newNote(title: string): string {
+export interface NewNoteOptions {
+  kind?: NoteKind;
+}
+
+export function newNote(title: string, opts: NewNoteOptions = {}): string {
   const env = getEnv();
   const id = generateId();
   const slug = slugify(title);
   const filename = `${id}-${slug}.md`;
   const filepath = join(env.notesDir, filename);
 
-  writeNote(filepath, { id, title }, "");
+  writeNote(filepath, { id, title, kind: opts.kind ?? DEFAULT_NOTE_KIND }, "");
   commitAndPush(env.dataDir, [filepath], `created note ${id}-${slug}`);
   return filepath;
 }
 
 export interface UpdateOptions {
+  kind?: NoteKind | null; // null = clear
   status?: string | null; // null = clear
   tags?: string[] | null; // null = clear
   content?: string;
@@ -41,6 +49,14 @@ export function updateNote(id: string, opts: UpdateOptions): string {
 
   const note = parseNote(filepath);
   const data = { ...note.data };
+
+  if (opts.kind !== undefined) {
+    if (opts.kind === null) {
+      delete data.kind;
+    } else {
+      data.kind = opts.kind;
+    }
+  }
 
   if (opts.status !== undefined) {
     if (opts.status === null || opts.status === "clear" || opts.status === "") {
@@ -120,6 +136,7 @@ export function deleteNote(id: string): string {
 export interface SearchResult {
   id: string;
   title: string;
+  kind: NoteKind | null;
   status: string | null;
   tags: string[];
   filename: string;
@@ -148,6 +165,7 @@ export function searchNotes(query: string): SearchResult[] {
         results.push({
           id: note.data.id,
           title: note.data.title,
+          kind: readNoteKind(note.data.kind),
           status: note.data.status || null,
           tags: note.data.tags || [],
           filename: file,
@@ -164,6 +182,7 @@ export function searchNotes(query: string): SearchResult[] {
         results.push({
           id,
           title: file.replace(/^[^-]+-/, "").replace(/\.md$/, "").replace(/-/g, " "),
+          kind: null,
           status: null,
           tags: [],
           filename: file,

@@ -6,7 +6,7 @@ A minimal, file-based personal knowledge system designed for AI-assisted workflo
 
 - **One note per idea** — notes evolve in place, no separate drafts
 - **Stable IDs** — 21-character nanoid that never changes, even when renaming
-- **Minimal metadata** — just id, title, optional status and tags
+- **Minimal metadata** — id, title, note kind, and optional status/tags
 - **Git-backed** — optional automatic commit and push
 - **AI-native** — works with any agent that can run shell commands
 - **Web UI** — simple React app for human access
@@ -58,6 +58,7 @@ Follows the [AgentSkills](https://skill.md) format supported by most AI coding a
 ---
 id: abc123def456ghi789012
 title: My Note Title
+kind: project
 status: building
 tags: [tag1, tag2]
 ---
@@ -79,6 +80,7 @@ Or use the CLI directly:
 ```bash
 # Create a note
 bun scripts/chaos.ts new "My First Note"
+bun scripts/chaos.ts new --kind=research "My Research Note"
 
 # Search notes
 bun scripts/chaos.ts search "keyword"

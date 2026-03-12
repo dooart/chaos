@@ -5,8 +5,9 @@ import { readdir, readFile, writeFile, stat, readlink, lstat } from "fs/promises
 import { join, dirname, resolve } from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
-import { newNote as createNote, updateNote, renameNote as renameNoteLib, deleteNote as deleteNoteLib } from "../scripts/lib/notes.ts";
+import { newNote as createNote, renameNote as renameNoteLib, deleteNote as deleteNoteLib } from "../scripts/lib/notes.ts";
 import { commitAndPush } from "../scripts/lib/git.ts";
+import { DEFAULT_NOTE_KIND, NOTE_KINDS, parseNoteKind, readNoteKind } from "../scripts/lib/frontmatter.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = dirname(__dirname);
@@ -83,20 +84,20 @@ app.get("/chaos/logout", (c) => {
 
 
 // Helper to parse frontmatter
-function parseFrontmatter(content: string): { frontmatter: Record<string, any>; body: string } {
+function parseFrontmatter(content: string): { frontmatter: Record<string, string | string[]>; body: string } {
   const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!match) return { frontmatter: {}, body: content };
   
-  const frontmatter: Record<string, any> = {};
+  const frontmatter: Record<string, string | string[]> = {};
   const lines = match[1].split("\n");
   for (const line of lines) {
     const colonIdx = line.indexOf(":");
     if (colonIdx > 0) {
       const key = line.slice(0, colonIdx).trim();
-      let value = line.slice(colonIdx + 1).trim();
+      let value: string | string[] = line.slice(colonIdx + 1).trim();
       // Parse YAML arrays
-      if (value.startsWith("[") && value.endsWith("]")) {
-        value = value.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean) as any;
+      if (typeof value === "string" && value.startsWith("[") && value.endsWith("]")) {
+        value = value.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
       }
       frontmatter[key] = value;
     }
@@ -128,6 +129,11 @@ app.get("/chaos/api/notes", async (c) => {
   const page = parseInt(c.req.query("page") || "1");
   const limit = parseInt(c.req.query("limit") || "20");
   const search = c.req.query("search") || "";
+  const kindParam = c.req.query("kind") || DEFAULT_NOTE_KIND;
+
+  if (kindParam !== "all" && !NOTE_KINDS.some((kind) => kind === kindParam)) {
+    return c.json({ error: `Invalid kind '${kindParam}'` }, 400);
+  }
   
   try {
     const files = await readdir(NOTES_DIR);
@@ -143,6 +149,7 @@ app.get("/chaos/api/notes", async (c) => {
         return {
           id: frontmatter.id || "",
           title: frontmatter.title || "",
+          kind: readNoteKind(frontmatter.kind),
           status: frontmatter.status || null,
           tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : [],
           filename,
@@ -154,12 +161,17 @@ app.get("/chaos/api/notes", async (c) => {
     
     // Filter by search
     let filtered = notes;
+    if (kindParam !== "all") {
+      filtered = filtered.filter((n) => n.kind === kindParam || (kindParam === DEFAULT_NOTE_KIND && n.kind === null));
+    }
+
     if (search) {
       const q = search.toLowerCase();
-      filtered = notes.filter((n) => {
+      filtered = filtered.filter((n) => {
         // Priority: title > tags > content
         if (n.title.toLowerCase().includes(q)) return true;
         if (n.tags.some((t: string) => t.toLowerCase().includes(q))) return true;
+        if ((n.kind || "").toLowerCase().includes(q)) return true;
         if (n.body.toLowerCase().includes(q)) return true;
         return false;
       });
@@ -178,13 +190,18 @@ app.get("/chaos/api/notes", async (c) => {
     
     const total = filtered.length;
     const start = (page - 1) * limit;
-    const paginated = filtered.slice(start, start + limit).map(({ body, ...rest }) => rest);
+    const paginated = filtered.slice(start, start + limit).map((note) => {
+      const { body, ...rest } = note;
+      void body;
+      return rest;
+    });
     
     return c.json({
       notes: paginated,
       total,
       page,
       limit,
+      kind: kindParam,
       hasMore: start + limit < total,
     });
   } catch (e) {
@@ -223,6 +240,7 @@ app.get("/chaos/api/notes/:id", async (c) => {
     return c.json({
       id: frontmatter.id,
       title: frontmatter.title,
+      kind: readNoteKind(frontmatter.kind),
       status: frontmatter.status || null,
       tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : [],
       project: frontmatter.project || null,
@@ -244,9 +262,16 @@ app.post("/chaos/api/notes", async (c) => {
   if (!title) {
     return c.json({ error: "Title is required" }, 400);
   }
+
+  let kind;
+  try {
+    kind = parseNoteKind(typeof body.kind === "string" ? body.kind : undefined);
+  } catch (e) {
+    return c.json({ error: e instanceof Error ? e.message : String(e) }, 400);
+  }
   
   try {
-    const filepath = createNote(title);
+    const filepath = createNote(title, kind ? { kind } : undefined);
     const filename = filepath.split("/").pop() || "";
     const id = filename.split("-")[0];
     return c.json({ id, filepath });
@@ -309,7 +334,7 @@ app.delete("/chaos/api/notes/:id", async (c) => {
 });
 
 // PRD validation — uses shared lib
-import { validatePrd, type PrdStory, type PrdValidation } from "../scripts/lib/prd.ts";
+import { validatePrd } from "../scripts/lib/prd.ts";
 
 // Resolve project path from note frontmatter
 function resolveProjectPath(projectField: string): string | null {

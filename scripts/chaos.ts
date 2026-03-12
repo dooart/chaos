@@ -3,7 +3,7 @@
 import { newNote, updateNote, renameNote, deleteNote, searchNotes } from "./lib/notes.ts";
 import { addImageToNote } from "./lib/images.ts";
 import { validatePrd } from "./lib/prd.ts";
-import { parseNote } from "./lib/frontmatter.ts";
+import { parseNote, parseNoteKind } from "./lib/frontmatter.ts";
 import { readFileSync } from "fs";
 
 const [command, ...args] = process.argv.slice(2);
@@ -12,8 +12,9 @@ function usage() {
   console.error(`Usage: chaos.ts <command> [args]
 
 Commands:
-  new <title>                          Create a new note
+  new [--kind=project] <title>         Create a new note
   update <id> [options] <content>       Update a note
+    --kind=core|project|research|thought|clear
     --status=building|done|clear
     --tags=tag1,tag2 (empty to clear)
   rename <id> <new-title>              Rename a note
@@ -30,8 +31,24 @@ if (!command) usage();
 try {
   switch (command) {
     case "new": {
-      if (!args[0]) { console.error("Usage: chaos.ts new <title>"); process.exit(1); }
-      const path = newNote(args[0]);
+      let title = "";
+      let kind;
+
+      for (const arg of args) {
+        if (arg.startsWith("--kind=")) {
+          const parsedKind = parseNoteKind(arg.slice(7));
+          if (parsedKind === null) {
+            console.error("Usage: chaos.ts new [--kind=core|project|research|thought] <title>");
+            process.exit(1);
+          }
+          kind = parsedKind;
+        } else if (!title) {
+          title = arg;
+        }
+      }
+
+      if (!title) { console.error("Usage: chaos.ts new [--kind=core|project|research|thought] <title>"); process.exit(1); }
+      const path = newNote(title, kind ? { kind } : undefined);
       console.log(path);
       break;
     }
@@ -39,10 +56,14 @@ try {
     case "update": {
       let id = "";
       let content: string | undefined;
+      let kind;
       let status: string | undefined;
       let tags: string[] | null | undefined;
 
       for (const arg of args) {
+        if (arg.startsWith("--kind=")) {
+          kind = parseNoteKind(arg.slice(7));
+        } else
         if (arg.startsWith("--status=")) {
           status = arg.slice(9);
         } else if (arg.startsWith("--tags=")) {
@@ -57,6 +78,7 @@ try {
       if (!id) { console.error("Usage: chaos.ts update <id> [options] <content>"); process.exit(1); }
 
       const path = updateNote(id, {
+        kind,
         status: status === undefined ? undefined : (status || null),
         tags,
         content,

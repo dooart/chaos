@@ -50,6 +50,7 @@ Notes are markdown files named `<id>-<slug>.md` in `{baseDir}/data/notes/`.
 ---
 id: abc123def456ghi789012
 title: My Note Title
+kind: project
 status: building
 tags: [tag1, tag2]
 ---
@@ -65,6 +66,7 @@ Markdown body...
 |-------|----------|-------------|
 | `id` | Yes | 21-character nanoid (lowercase alphanumeric). Never changes. |
 | `title` | Yes | Human-readable title |
+| `kind` | No | One of `core`, `project`, `research`, `thought`. New notes default to `project`. Legacy notes may omit it during backfill. |
 | `status` | No | Either `building` (actively working) or `done` (finished). Omit for seed/draft notes. |
 | `tags` | No | List of lowercase tags (a-z, 0-9, hyphens only, max 20 chars each) |
 
@@ -84,6 +86,7 @@ All operations use the TypeScript CLI at `{baseDir}/scripts/chaos.ts`. Run with 
 
 ```bash
 bun {baseDir}/scripts/chaos.ts new "Note Title"
+bun {baseDir}/scripts/chaos.ts new --kind=research "Postgres indexing notes"
 ```
 
 Creates a new note with generated ID, commits it (if git enabled), and prints the file path.
@@ -100,6 +103,9 @@ cat > /tmp/note.md <<'EOF'
 Real newlines here.
 EOF
 bun {baseDir}/scripts/chaos.ts update "<id>" "$(cat /tmp/note.md)"
+
+# Update kind only
+bun {baseDir}/scripts/chaos.ts update "<id>" --kind=thought
 
 # Update status only (keeps existing content)
 bun {baseDir}/scripts/chaos.ts update "<id>" --status=building
@@ -118,6 +124,7 @@ bun {baseDir}/scripts/chaos.ts update "<id>" --tags=
 ```
 
 Options:
+- `--kind=core|project|research|thought|clear` — Set or clear note kind
 - `--status=building|done|clear` — Set or clear the status
 - `--tags=tag1,tag2` — Set tags (comma-separated), or empty to clear
 - Content argument is optional; omit to keep existing body
