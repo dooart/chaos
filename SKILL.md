@@ -66,7 +66,7 @@ Markdown body...
 |-------|----------|-------------|
 | `id` | Yes | 21-character nanoid (lowercase alphanumeric). Never changes. |
 | `title` | Yes | Human-readable title |
-| `kind` | No | One of `core`, `project`, `research`, `thought`. New notes default to `project`. Legacy notes may omit it during backfill. |
+| `kind` | No | One of `core`, `project`, `source`, `thought`. New notes default to `project`. Legacy notes may omit it during backfill. |
 | `status` | No | Either `building` (actively working) or `done` (finished). Omit for seed/draft notes. |
 | `tags` | No | List of lowercase tags (a-z, 0-9, hyphens only, max 20 chars each) |
 
@@ -76,7 +76,7 @@ When creating a note, the agent should choose the **best-fit** `kind` based on i
 
 - `core` — durable principles, identity docs, long-lived operating rules
 - `project` — things to build/ship, experiments, product ideas, active initiatives
-- `research` — structured learning, source reviews, technical/topic investigations
+- `source` — external sources (books, papers, talks, links) and extraction notes
 - `thought` — reflections, opinions, journal-style notes, rough ideas
 
 If uncertain, prefer `project`.
@@ -98,7 +98,7 @@ All operations use the TypeScript CLI at `{baseDir}/scripts/chaos.ts`. Run with 
 
 ```bash
 bun {baseDir}/scripts/chaos.ts new "Note Title"
-bun {baseDir}/scripts/chaos.ts new --kind=research "Postgres indexing notes"
+bun {baseDir}/scripts/chaos.ts new --kind=source "Postgres indexing notes"
 ```
 
 Creates a new note with generated ID, commits it (if git enabled), and prints the file path.
@@ -146,7 +146,7 @@ bun {baseDir}/scripts/chaos.ts update "<id>" --tags=
 ```
 
 Options:
-- `--kind=core|project|research|thought|clear` — Set or clear note kind
+- `--kind=core|project|source|thought|clear` — Set or clear note kind
 - `--status=building|done|clear` — Set or clear the status
 - `--tags=tag1,tag2` — Set tags (comma-separated), or empty to clear
 - Content argument is optional; omit to keep existing body

@@ -80,7 +80,7 @@ Or use the CLI directly:
 ```bash
 # Create a note
 bun scripts/chaos.ts new "My First Note"
-bun scripts/chaos.ts new --kind=research "My Research Note"
+bun scripts/chaos.ts new --kind=source "My Source Note"
 
 # Search notes
 bun scripts/chaos.ts search "keyword"

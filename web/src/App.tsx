@@ -5,12 +5,12 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import './App.css'
 
 // Types
-type NoteKind = 'core' | 'project' | 'research' | 'thought'
+type NoteKind = 'core' | 'project' | 'source' | 'thought'
 type NoteKindFilter = NoteKind | 'all'
 
 const NOTE_KIND_OPTIONS: Array<{ value: NoteKind; label: string }> = [
   { value: 'project', label: 'Project' },
-  { value: 'research', label: 'Research' },
+  { value: 'source', label: 'Source' },
   { value: 'thought', label: 'Thought' },
   { value: 'core', label: 'Core' },
 ]
@@ -279,21 +279,23 @@ function NoteList({
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
         />
-        <select
-          className="kind-filter"
-          value={kindFilter}
-          onChange={(e) => setKindFilter(e.target.value as NoteKindFilter)}
-          aria-label="Filter notes by kind"
-        >
-          <option value="project">Project</option>
-          <option value="research">Research</option>
-          <option value="thought">Thought</option>
-          <option value="core">Core</option>
-          <option value="all">All</option>
-        </select>
-        <button className="new-btn" onClick={() => setShowNewModal(true)}>
-          + New
-        </button>
+        <div className="list-header-row">
+          <select
+            className="kind-filter"
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value as NoteKindFilter)}
+            aria-label="Filter notes by kind"
+          >
+            <option value="project">Project</option>
+            <option value="source">Source</option>
+            <option value="thought">Thought</option>
+            <option value="core">Core</option>
+            <option value="all">All</option>
+          </select>
+          <button className="new-btn" onClick={() => setShowNewModal(true)}>
+            + New
+          </button>
+        </div>
       </div>
       
       <div className="notes-container">
@@ -309,15 +311,19 @@ function NoteList({
                 className={`note-item ${selectedId === note.id ? 'selected' : ''}`}
                 onClick={() => onSelectNote(note.id)}
               >
-                <span className="note-title">{note.title}</span>
-                <span className={`note-kind ${note.kind ? `kind-${note.kind}` : 'kind-legacy'}`}>
-                  {note.kind ?? 'legacy'}
-                </span>
-                {note.status && (
-                  <span className={`note-status status-${note.status}`}>
-                    {note.status}
-                  </span>
-                )}
+                <div className="note-item-main">
+                  <span className="note-title">{note.title}</span>
+                  <div className="note-meta-row">
+                    <span className={`note-kind ${note.kind ? `kind-${note.kind}` : 'kind-legacy'}`}>
+                      {note.kind ?? 'legacy'}
+                    </span>
+                    {note.status && (
+                      <span className={`note-status status-${note.status}`}>
+                        {note.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
 
