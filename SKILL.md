@@ -70,6 +70,18 @@ Markdown body...
 | `status` | No | Either `building` (actively working) or `done` (finished). Omit for seed/draft notes. |
 | `tags` | No | List of lowercase tags (a-z, 0-9, hyphens only, max 20 chars each) |
 
+### Kind Selection Policy (Agent Requirement)
+
+When creating a note, the agent should choose the **best-fit** `kind` based on intent:
+
+- `core` — durable principles, identity docs, long-lived operating rules
+- `project` — things to build/ship, experiments, product ideas, active initiatives
+- `research` — structured learning, source reviews, technical/topic investigations
+- `thought` — reflections, opinions, journal-style notes, rough ideas
+
+If uncertain, prefer `project`.
+
+
 ### Internal Links
 
 - Link to another note: `[[id]]` — title resolves at read time
@@ -90,6 +102,16 @@ bun {baseDir}/scripts/chaos.ts new --kind=research "Postgres indexing notes"
 ```
 
 Creates a new note with generated ID, commits it (if git enabled), and prints the file path.
+
+**Agent response requirement after creating a note:** always include:
+1) the `kind` chosen, and
+2) the note URL in the form `/chaos/note/<id>` (or full URL if host is known).
+
+Example response snippet:
+- `Created note as kind: project`
+- `URL: /chaos/note/abc123def456ghi789012`
+
+This makes it easy for the human to immediately request a kind correction if needed.
 
 ### Update a Note
 
