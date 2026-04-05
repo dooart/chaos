@@ -14,7 +14,7 @@ function usage() {
 Commands:
   new [--kind=project] <title>         Create a new note
   update <id> [options] <content>       Update a note
-    --kind=core|project|source|thought|clear
+    --kind=core|project|source|thought|synthesis|clear
     --status=building|done|clear
     --tags=tag1,tag2 (empty to clear)
   rename <id> <new-title>              Rename a note
@@ -38,7 +38,7 @@ try {
         if (arg.startsWith("--kind=")) {
           const parsedKind = parseNoteKind(arg.slice(7));
           if (parsedKind === null) {
-            console.error("Usage: chaos.ts new [--kind=core|project|source|thought] <title>");
+            console.error("Usage: chaos.ts new [--kind=core|project|source|thought|synthesis] <title>");
             process.exit(1);
           }
           kind = parsedKind;
@@ -47,7 +47,7 @@ try {
         }
       }
 
-      if (!title) { console.error("Usage: chaos.ts new [--kind=core|project|source|thought] <title>"); process.exit(1); }
+      if (!title) { console.error("Usage: chaos.ts new [--kind=core|project|source|thought|synthesis] <title>"); process.exit(1); }
       const path = newNote(title, kind ? { kind } : undefined);
       console.log(path);
       break;

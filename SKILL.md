@@ -66,7 +66,7 @@ Markdown body...
 |-------|----------|-------------|
 | `id` | Yes | 21-character nanoid (lowercase alphanumeric). Never changes. |
 | `title` | Yes | Human-readable title |
-| `kind` | No | One of `core`, `project`, `source`, `thought`. New notes default to `project`. Legacy notes may omit it during backfill. |
+| `kind` | No | One of `core`, `project`, `source`, `thought`, `synthesis`. New notes default to `project`. Legacy notes may omit it during backfill. |
 | `status` | No | Either `building` (actively working) or `done` (finished). Omit for seed/draft notes. |
 | `tags` | No | List of lowercase tags (a-z, 0-9, hyphens only, max 20 chars each) |
 
@@ -78,6 +78,7 @@ When creating a note, the agent should choose the **best-fit** `kind` based on i
 - `project` — things to build/ship, experiments, product ideas, active initiatives
 - `source` — external sources (books, papers, talks, links) and extraction notes
 - `thought` — reflections, opinions, journal-style notes, rough ideas
+- `synthesis` — integrated summaries that combine multiple notes/sources into conclusions or plans
 
 If uncertain, prefer `project`.
 
@@ -146,7 +147,7 @@ bun {baseDir}/scripts/chaos.ts update "<id>" --tags=
 ```
 
 Options:
-- `--kind=core|project|source|thought|clear` — Set or clear note kind
+- `--kind=core|project|source|thought|synthesis|clear` — Set or clear note kind
 - `--status=building|done|clear` — Set or clear the status
 - `--tags=tag1,tag2` — Set tags (comma-separated), or empty to clear
 - Content argument is optional; omit to keep existing body

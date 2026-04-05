@@ -270,6 +270,12 @@
   background: rgba(141, 199, 166, 0.1);
 }
 
+.kind-synthesis {
+  color: #d79a77;
+  border-color: rgba(215, 154, 119, 0.35);
+  background: rgba(215, 154, 119, 0.1);
+}
+
 .kind-legacy {
   color: var(--text-muted);
   border-style: dashed;

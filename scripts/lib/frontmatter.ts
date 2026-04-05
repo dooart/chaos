@@ -1,7 +1,7 @@
 import matter from "gray-matter";
 import { readFileSync, writeFileSync } from "fs";
 
-export const NOTE_KINDS = ["core", "project", "source", "thought"] as const;
+export const NOTE_KINDS = ["core", "project", "source", "thought", "synthesis"] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
 export const DEFAULT_NOTE_KIND: NoteKind = "project";
 
@@ -68,7 +68,7 @@ export function parseNoteKind(value: string | null | undefined): NoteKind | null
   if (value === undefined) return undefined;
   if (value === null || value === "" || value === "clear") return null;
   if (!isNoteKind(value)) {
-    throw new Error(`invalid kind '${value}' (must be 'core', 'project', 'source', 'thought', or 'clear')`);
+    throw new Error(`invalid kind '${value}' (must be 'core', 'project', 'source', 'thought', 'synthesis', or 'clear')`);
   }
   return value;
 }

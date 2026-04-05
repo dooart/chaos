@@ -5,13 +5,14 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import './App.css'
 
 // Types
-type NoteKind = 'core' | 'project' | 'source' | 'thought'
+type NoteKind = 'core' | 'project' | 'source' | 'thought' | 'synthesis'
 type NoteKindFilter = NoteKind | 'all'
 
 const NOTE_KIND_OPTIONS: Array<{ value: NoteKind; label: string }> = [
   { value: 'project', label: 'Project' },
   { value: 'source', label: 'Source' },
   { value: 'thought', label: 'Thought' },
+  { value: 'synthesis', label: 'Synthesis' },
   { value: 'core', label: 'Core' },
 ]
 
@@ -289,6 +290,7 @@ function NoteList({
             <option value="project">Project</option>
             <option value="source">Source</option>
             <option value="thought">Thought</option>
+            <option value="synthesis">Synthesis</option>
             <option value="core">Core</option>
             <option value="all">All</option>
           </select>
