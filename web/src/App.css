@@ -667,6 +667,15 @@
   color: var(--text-soft);
 }
 
+.editor-preview,
+.editor-preview p,
+.editor-preview li,
+.editor-preview blockquote,
+.editor-preview a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .editor-preview img {
   max-width: 100%;
   height: auto;
