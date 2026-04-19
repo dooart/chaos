@@ -4,6 +4,7 @@ import { newNote, updateNote, renameNote, deleteNote, searchNotes } from "./lib/
 import { addImageToNote } from "./lib/images.ts";
 import { validatePrd } from "./lib/prd.ts";
 import { parseNote, parseNoteKind } from "./lib/frontmatter.ts";
+import { getEnv } from "./lib/env.ts";
 import { readFileSync } from "fs";
 
 const [command, ...args] = process.argv.slice(2);
@@ -27,6 +28,10 @@ Commands:
 }
 
 if (!command) usage();
+
+// Sync repos before dispatching commands. This guarantees the CLI itself
+// is running on latest code/skills and that note data is current.
+getEnv();
 
 try {
   switch (command) {

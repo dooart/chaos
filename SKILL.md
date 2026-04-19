@@ -13,6 +13,12 @@ Notes are stored at `~/.chaos` by default. The data directory and symlink are cr
 
 To use a custom location, set `CHAOS_DATA_DIR` environment variable.
 
+CLI sync behavior on each run (best effort):
+- pull `~/.chaos` (data repo) if it is a git repo
+- pull `{baseDir}` (chaos code/skill repo) if it is a git repo
+
+This keeps note data and chaos code/skills current before command execution.
+
 If dependencies are missing (e.g. module not found errors), run `bun install` from `{baseDir}`. If the web server isn't running, guide the user to `{baseDir}/SETUP.md`.
 
 ## When to Use This Skill
@@ -41,6 +47,41 @@ Activate this skill when the user:
 ├── notes/             # All notes live here
 └── assets/            # Images with metadata
 ```
+
+## Source Note Format (raw vs synthesis)
+
+Use this section when creating `kind: source` notes.
+
+### Decision rule
+- If you are capturing an external input (thread/article/video/repo/docs), create `kind: source`.
+- If you are integrating multiple sources into conclusions/plans, create or update `kind: synthesis`.
+
+### Ingestion policy (current)
+- Source notes are **lightly processed at ingestion** (not verbatim dumps).
+- Keep only high-signal details needed for future retrieval and synthesis.
+- Preserve provenance with explicit source links/context.
+
+### Required structure for `kind: source`
+```markdown
+## Source
+## Overview
+## Main interesting ideas
+## No-hype take
+```
+
+### Optional sections for `kind: source`
+Add only when useful:
+- `## Technical details worth keeping`
+- `## Claims to verify`
+- `## Open questions`
+
+### Raw capture policy
+Do **not** dump full raw transcripts in normal source notes.
+If raw text is required (legal, audit, exact quote preservation), put it in a dedicated `kind: source` note section clearly labeled `## Raw excerpt` and keep it minimal/targeted.
+
+### Relationship to `kind: synthesis`
+- `source` = one source, compressed extraction + critique.
+- `synthesis` = cross-source integration, hypotheses, decisions, experiments.
 
 ## Note Format
 

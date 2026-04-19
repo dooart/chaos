@@ -68,6 +68,24 @@ tags: [tag1, tag2]
 Markdown body with [[links]] to other notes by ID.
 ```
 
+## Source Note Convention (raw vs synthesis)
+
+Chaos uses two note kinds for research workflows:
+
+- `kind: source` — one external source, lightly processed at ingestion
+- `kind: synthesis` — cross-source integration and conclusions
+
+Current `source` format (recommended):
+- `## Source`
+- `## Overview`
+- `## Main interesting ideas`
+- `## No-hype take`
+
+Optional sections: technical details, claims to verify, open questions.
+
+Default behavior is **light synthesis at ingestion**, not full raw transcript dumps.
+Use targeted raw excerpts only when exact quoting is necessary.
+
 ## Quick Start
 
 After setup, ask your AI agent:
@@ -88,6 +106,10 @@ bun scripts/chaos.ts search "keyword"
 # Start the web UI
 cd web && bun run server.ts
 ```
+
+The CLI auto-syncs before each command (best effort):
+- pulls the data repo (`~/.chaos`) if git-enabled
+- pulls the chaos code repo itself before executing commands
 
 ## License
 

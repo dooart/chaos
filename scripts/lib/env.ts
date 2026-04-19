@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, symlinkSync, readlinkSync } from "fs";
+import { existsSync, mkdirSync, symlinkSync } from "fs";
 import { join, dirname } from "path";
 import { spawnSync } from "child_process";
 
@@ -9,11 +9,26 @@ export interface ChaosEnv {
   skillRoot: string;
 }
 
+let cachedEnv: ChaosEnv | null = null;
+
+function pullGitRepo(repoDir: string) {
+  if (!existsSync(join(repoDir, ".git"))) return;
+  spawnSync("git", ["-C", repoDir, "pull", "--rebase", "--quiet"], {
+    stdio: "ignore",
+  });
+}
+
 export function getEnv(): ChaosEnv {
+  if (cachedEnv) return cachedEnv;
+
   const dataDir = process.env.CHAOS_DATA_DIR || join(process.env.HOME!, ".chaos");
   const scriptDir = dirname(new URL(import.meta.url).pathname);
   const skillRoot = dirname(dirname(scriptDir));
   const dataLink = join(skillRoot, "data");
+
+  // Always sync both repos first (best effort).
+  pullGitRepo(skillRoot);
+  pullGitRepo(dataDir);
 
   const notesDir = join(dataDir, "notes");
   const assetsDir = join(dataDir, "assets");
@@ -31,12 +46,6 @@ export function getEnv(): ChaosEnv {
     }
   }
 
-  // Pull latest if git repo
-  if (existsSync(join(dataDir, ".git"))) {
-    spawnSync("git", ["-C", dataDir, "pull", "--rebase", "--quiet"], {
-      stdio: "ignore",
-    });
-  }
-
-  return { dataDir, notesDir, assetsDir, skillRoot };
+  cachedEnv = { dataDir, notesDir, assetsDir, skillRoot };
+  return cachedEnv;
 }

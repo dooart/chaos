@@ -2,6 +2,10 @@
 
 This guide helps you set up Chaos Notes. The skill can be used with any AI agent that can run shell commands (OpenClaw, Claude Code, Codex, etc.).
 
+By default, the CLI performs a best-effort `git pull --rebase` before each command for:
+- the data repo (`~/.chaos`) when git-enabled
+- the chaos skill/code repo itself when git-enabled
+
 ## Prerequisites
 
 - **Bun** — JavaScript runtime ([install](https://bun.sh))
